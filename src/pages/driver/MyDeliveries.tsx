@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Truck, MapPin, Package, Clock, ChevronRight, Inbox } from "lucide-react";
+import { MapPin, Package, Clock, ChevronRight, Inbox } from "lucide-react";
 
 export type DriverStop = {
   orderId: string;

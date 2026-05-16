@@ -63,7 +63,7 @@ export default function RegrasSplitList() {
                   </td>
                 </tr>
               )}
-              {regrasList.map((regra) => (
+              {regrasList.map((regra: any) => (
                 <tr key={regra.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-slate-900 dark:text-white">

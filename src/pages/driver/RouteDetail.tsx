@@ -6,7 +6,8 @@ import {
   Phone, CheckCircle2, Trophy, FileText, X,
   ChevronRight
 } from "lucide-react";
-import { mockDriverRoutes, DriverRoute, DriverStop } from "./MyDeliveries";
+import { mockDriverRoutes } from "./MyDeliveries";
+import type { DriverRoute, DriverStop } from "./MyDeliveries";
 
 const statusStyles: Record<string, string> = {
   'Aguardando rota': 'bg-amber-100 text-amber-800',
