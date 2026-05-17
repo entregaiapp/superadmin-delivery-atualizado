@@ -38,6 +38,9 @@ export default function AdminLayout() {
   ];
 
   const visibleMenuItems = menuItems.filter((item) => canView(item.slug));
+  const activeMenuItem = visibleMenuItems
+    .filter((item) => location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path)))
+    .sort((a, b) => b.path.length - a.path.length)[0];
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900">
@@ -54,7 +57,7 @@ export default function AdminLayout() {
         
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {visibleMenuItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
+            const isActive = activeMenuItem?.path === item.path;
             return (
               <Link
                 key={item.path}
