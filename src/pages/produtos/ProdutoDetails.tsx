@@ -267,7 +267,7 @@ export default function ProdutoDetails() {
         </div>
       </div>
 
-      <Card>
+      <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <ImageIcon className="w-4 h-4" />
@@ -278,7 +278,7 @@ export default function ProdutoDetails() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProductImageGallery productId={produto.id} productName={produto.nome} />
+          <ProductImageGallery productId={produto.id} productName={produto.nome} compact />
         </CardContent>
       </Card>
 

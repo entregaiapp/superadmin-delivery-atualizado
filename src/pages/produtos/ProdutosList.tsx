@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Edit, MoreVertical, Package, Plus, Search, Settings, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit, Image as ImageIcon, MoreVertical, Package, Plus, Search, Settings, Trash2, X } from "lucide-react";
 import { produtoService, type PaginatedProdutos, type Produto } from "../../features/produtos/produtoService";
+import ProductImageGallery from "./ProductImageGallery";
 
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -21,6 +22,7 @@ export default function ProdutosList() {
   const [perPage, setPerPage] = useState(20);
   const [sortBy, setSortBy] = useState("nome");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [imageModalIndex, setImageModalIndex] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -50,6 +52,13 @@ export default function ProdutosList() {
 
   const produtos: Produto[] = paginated.data;
   const totalPages = Math.max(1, paginated.total_pages || 1);
+  const selectedImageProduct = imageModalIndex !== null ? produtos[imageModalIndex] : null;
+
+  useEffect(() => {
+    if (imageModalIndex !== null && imageModalIndex >= produtos.length) {
+      setImageModalIndex(produtos.length > 0 ? produtos.length - 1 : null);
+    }
+  }, [imageModalIndex, produtos.length]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => produtoService.delete(id),
@@ -66,6 +75,25 @@ export default function ProdutosList() {
     },
   });
 
+  const openImageManager = (produto: Produto) => {
+    const index = produtos.findIndex((item) => item.id === produto.id);
+    setImageModalIndex(index >= 0 ? index : 0);
+  };
+
+  const goToPreviousProduct = () => {
+    setImageModalIndex((current) => {
+      if (current === null || produtos.length === 0) return current;
+      return current === 0 ? produtos.length - 1 : current - 1;
+    });
+  };
+
+  const goToNextProduct = () => {
+    setImageModalIndex((current) => {
+      if (current === null || produtos.length === 0) return current;
+      return current === produtos.length - 1 ? 0 : current + 1;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -73,7 +101,11 @@ export default function ProdutosList() {
           <h2 className="text-2xl font-bold tracking-tight">Produtos Globais</h2>
           <p className="text-muted-foreground">Gerencie o catálogo global de produtos da plataforma.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => produtos[0] && setImageModalIndex(0)} disabled={produtos.length === 0}>
+            <ImageIcon className="w-4 h-4 mr-2" />
+            Gerenciar imagens
+          </Button>
           <Link to="/products/import">
             <Button variant="outline">
               <Package className="w-4 h-4 mr-2" />
@@ -211,6 +243,10 @@ export default function ProdutosList() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => openImageManager(produto)}>
+                              <ImageIcon className="w-4 h-4 mr-2" />
+                              Imagens rápidas
+                            </DropdownMenuItem>
                             <Link to={`/products/${produto.id}`}>
                               <DropdownMenuItem className="cursor-pointer">
                                 <Settings className="w-4 h-4 mr-2" />
@@ -286,6 +322,79 @@ export default function ProdutosList() {
           </div>
         </CardContent>
       </Card>
+
+      {selectedImageProduct && imageModalIndex !== null && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-3 sm:p-6">
+          <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-md bg-white shadow-xl dark:bg-slate-950">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="h-12 w-12 flex-none overflow-hidden rounded-md bg-slate-100 dark:bg-slate-900">
+                  {selectedImageProduct.imagem_url ? (
+                    <img src={selectedImageProduct.imagem_url} alt={selectedImageProduct.nome} className="h-full w-full object-cover" />
+                  ) : (
+                    <Package className="m-3 h-6 w-6 text-slate-400" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold">{selectedImageProduct.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Produto {imageModalIndex + 1} de {produtos.length} nesta página
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={goToPreviousProduct}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={goToNextProduct}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setImageModalIndex(null)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {produtos.map((produto, index) => (
+                  <button
+                    key={produto.id}
+                    type="button"
+                    onClick={() => setImageModalIndex(index)}
+                    className={`flex w-48 flex-none items-center gap-2 rounded-md border px-2 py-2 text-left transition-colors ${
+                      index === imageModalIndex
+                        ? "border-primary bg-primary/5"
+                        : "border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900"
+                    }`}
+                  >
+                    <span className="h-10 w-10 flex-none overflow-hidden rounded bg-slate-100 dark:bg-slate-900">
+                      {produto.imagem_url ? (
+                        <img src={produto.imagem_url} alt={produto.nome} className="h-full w-full object-cover" />
+                      ) : (
+                        <Package className="m-2.5 h-5 w-5 text-slate-400" />
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium">{produto.nome}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{produto.codigo_barras || produto.marca || "Sem referência"}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <ProductImageGallery
+                key={selectedImageProduct.id}
+                productId={selectedImageProduct.id}
+                productName={selectedImageProduct.nome}
+                compact
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

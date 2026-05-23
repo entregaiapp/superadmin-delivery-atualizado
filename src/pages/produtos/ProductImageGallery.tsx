@@ -43,6 +43,7 @@ type ProductImageGalleryProps = {
   productName: string;
   pendingImages?: PendingProductImage[];
   onPendingImagesChange?: (images: PendingProductImage[]) => void;
+  compact?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -79,6 +80,7 @@ export default function ProductImageGallery({
   productName,
   pendingImages = [],
   onPendingImagesChange,
+  compact = false,
 }: ProductImageGalleryProps) {
   const queryClient = useQueryClient();
   const [urlValue, setUrlValue] = useState("");
@@ -312,42 +314,49 @@ export default function ProductImageGallery({
   };
 
   const isBusy = uploadMutation.isPending || uploadUrlMutation.isPending || deleteMutation.isPending || primaryMutation.isPending || reorderMutation.isPending;
+  const dropzonePadding = compact ? "p-4" : "p-6";
+  const imageGridClass = compact
+    ? "flex gap-3 overflow-x-auto pb-1"
+    : "grid grid-cols-2 md:grid-cols-4 gap-3";
+  const imageCardClass = compact
+    ? "group w-40 flex-none rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-950"
+    : "group rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-950";
 
   return (
-    <div className="space-y-4 rounded-md border border-slate-200 dark:border-slate-800 p-4">
-      <div className="flex flex-col md:flex-row md:items-end gap-3">
+    <div className="space-y-4 rounded-md border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-950">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4">
         <div className="flex-1 space-y-2">
           <Label htmlFor="image_url_input">Adicionar imagem por URL</Label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               id="image_url_input"
               value={urlValue}
               onChange={(event) => setUrlValue(event.target.value)}
               placeholder="https://exemplo.com/imagem.jpg"
             />
-            <Button type="button" onClick={addUrlImage} disabled={isBusy}>
+            <Button type="button" onClick={addUrlImage} disabled={isBusy} className="sm:w-auto">
               {uploadUrlMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LinkIcon className="w-4 h-4 mr-2" />}
               Baixar e salvar imagem
             </Button>
           </div>
         </div>
-      </div>
 
-      <div
-        {...getRootProps()}
-        className={`rounded-md border-2 border-dashed p-6 text-center transition-colors ${
-          isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40"
-        }`}
-      >
-        <input {...getInputProps()} />
-        <Upload className="w-8 h-8 mx-auto mb-3 text-slate-400" />
-        <p className="font-medium text-sm">Arraste imagens aqui</p>
-        <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP ou GIF até 8 MB. O backend converte para WebP otimizado.</p>
-        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={open} disabled={isBusy}>
-          Selecionar arquivo
-        </Button>
+        <div
+          {...getRootProps()}
+          className={`rounded-md border-2 border-dashed ${dropzonePadding} text-center transition-colors ${
+            isDragActive
+              ? "border-primary bg-primary/5"
+              : "border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40"
+          }`}
+        >
+          <input {...getInputProps()} />
+          <Upload className={`${compact ? "w-6 h-6 mb-2" : "w-8 h-8 mb-3"} mx-auto text-slate-400`} />
+          <p className="font-medium text-sm">Arraste imagens aqui</p>
+          <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WebP ou GIF até 8 MB.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={open} disabled={isBusy}>
+            Selecionar arquivo
+          </Button>
+        </div>
       </div>
 
       {message && (
@@ -366,15 +375,15 @@ export default function ProductImageGallery({
           Carregando imagens...
         </div>
       ) : galleryItems.length === 0 ? (
-        <div className="rounded-md border border-slate-200 dark:border-slate-800 py-10 text-center text-muted-foreground">
+        <div className="rounded-md border border-slate-200 dark:border-slate-800 py-8 text-center text-muted-foreground">
           <ImageIcon className="w-10 h-10 mx-auto mb-2 text-slate-300" />
           <p className="text-sm font-medium">Produto sem imagens</p>
           <p className="text-xs">Adicione uma imagem por URL ou arquivo local.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={imageGridClass}>
           {galleryItems.map((image, index) => (
-            <div key={image.id} className="group rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-950">
+            <div key={image.id} className={imageCardClass}>
               <div className="aspect-square bg-slate-100 dark:bg-slate-900 relative">
                 <img src={image.url} alt={image.alt_text || productName} className="h-full w-full object-cover" />
                 <div className="absolute left-2 top-2 flex gap-1">
