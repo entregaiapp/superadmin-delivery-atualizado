@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
 import { ArrowLeft, Edit, User, Mail, Phone, Shield, Store as StoreIcon, Clock } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import { formatBrasiliaDate } from "../../lib/dateTime";
 
 export default function UsuarioDetails() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +45,7 @@ export default function UsuarioDetails() {
 
   const formatDate = (d?: string | null) => {
     if (!d) return "Nunca";
-    return new Date(d).toLocaleString("pt-BR", {
+    return formatBrasiliaDate(d, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

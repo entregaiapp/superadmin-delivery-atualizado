@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { mockDriverRoutes } from "./MyDeliveries";
 import type { DriverRoute, DriverStop } from "./MyDeliveries";
+import { formatBrasiliaDate } from "../../lib/dateTime";
 
 const statusStyles: Record<string, string> = {
   'Aguardando rota': 'bg-amber-100 text-amber-800',
@@ -51,7 +52,7 @@ export default function RouteDetail() {
         status: 'Rota gerada',
         distanceKm: 12.4,
         durationMin: 45,
-        startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        startedAt: formatBrasiliaDate(new Date(), { hour: '2-digit', minute: '2-digit' }),
         mapsUrl: 'https://www.google.com/maps/dir/?api=1&travelmode=driving'
       };
     });
@@ -67,7 +68,7 @@ export default function RouteDetail() {
             ...s,
             status,
             problemReason: reason,
-            finishedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            finishedAt: formatBrasiliaDate(new Date(), { hour: '2-digit', minute: '2-digit' })
           };
         }
         return s;
@@ -87,7 +88,7 @@ export default function RouteDetail() {
         ...prev,
         status: newStatus,
         stops: newStops,
-        finishedAt: allFinished ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : prev.finishedAt
+        finishedAt: allFinished ? formatBrasiliaDate(new Date(), { hour: '2-digit', minute: '2-digit' }) : prev.finishedAt
       };
     });
     setProblemStop(null);

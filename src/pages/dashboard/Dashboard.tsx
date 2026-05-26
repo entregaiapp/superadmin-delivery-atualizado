@@ -1,7 +1,5 @@
 import { useMemo, useState, type ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -29,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
+import { dateInputInBrasilia, formatBrasiliaDate } from "../../lib/dateTime";
 
 function fmt(v: number | string | undefined | null) {
   if (v === undefined || v === null) return "R$ 0,00";
@@ -160,8 +159,8 @@ function normalizeDashboard(m: any) {
 }
 
 export default function Dashboard() {
-  const today = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = dateInputInBrasilia();
+  const thirtyDaysAgo = dateInputInBrasilia(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000));
   const [dataInicio, setDataInicio] = useState(thirtyDaysAgo);
   const [dataFim, setDataFim] = useState(today);
   const [lojaId, setLojaId] = useState("");
@@ -230,7 +229,7 @@ export default function Dashboard() {
             {m.scope === "store" ? `Dashboard da Loja: ${m.loja?.nome || "Selecionada"}` : "Visão Geral da Plataforma"}
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Atualizado em {m.gerado_em ? format(parseISO(m.gerado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+            Atualizado em {m.gerado_em ? formatBrasiliaDate(m.gerado_em, { dateStyle: "short", timeStyle: "short" }) : "-"}
           </p>
         </div>
 

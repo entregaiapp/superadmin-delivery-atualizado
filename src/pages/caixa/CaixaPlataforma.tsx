@@ -8,6 +8,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { dateInputInBrasilia } from "../../lib/dateTime";
 
 function fmt(v: number | string | undefined | null) {
   return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -27,8 +28,8 @@ const emptyForm: CaixaPlataformaPayload = {
 
 export default function CaixaPlataforma() {
   const queryClient = useQueryClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  const today = dateInputInBrasilia();
+  const firstDay = `${today.slice(0, 7)}-01`;
   const [filters, setFilters] = useState({ dataInicio: firstDay, dataFim: today, status: "", categoria: "", tipo: "" });
   const [form, setForm] = useState<CaixaPlataformaPayload>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ClipboardList, RefreshCw, Eye, Search, AlertCircle, Calendar, X } from 'lucide-react';
 import { api } from '../../lib/api';
+import { formatBrasiliaDate } from '../../lib/dateTime';
 
 interface AuditLog {
   id: string;
@@ -167,7 +168,7 @@ export default function AuditLogs() {
                         </span>
                         <span className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                           <Calendar className="w-3 h-3" />
-                          {new Date(log.criado_em).toLocaleString('pt-BR')}
+                          {formatBrasiliaDate(log.criado_em, { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                       </div>
                     </td>
@@ -220,7 +221,7 @@ export default function AuditLogs() {
                     </span>
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    Log gerado em {new Date(selectedLog.criado_em).toLocaleString('pt-BR')}
+                    Log gerado em {formatBrasiliaDate(selectedLog.criado_em, { dateStyle: 'short', timeStyle: 'short' })}
                   </p>
                 </div>
                 <button
