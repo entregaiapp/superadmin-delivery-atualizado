@@ -12,6 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const DEFAULT_PRIMARY_COLOR = "#122a4c";
+const DEFAULT_SECONDARY_COLOR = "#16a34a";
+const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Informe uma cor válida");
+
 const storeSchema = z.object({
   nome: z.string().min(3, "O nome da loja é obrigatório (mín. 3 caracteres)"),
   razao_social: z.string().optional().or(z.literal("")),
@@ -27,6 +31,8 @@ const storeSchema = z.object({
   taxa_entrega_padrao: z.number().min(0, "Taxa não pode ser negativa"),
   latitude: z.number().min(-90, "Latitude inválida").max(90, "Latitude inválida").nullable().optional(),
   longitude: z.number().min(-180, "Longitude inválida").max(180, "Longitude inválida").nullable().optional(),
+  cor_primaria: colorSchema,
+  cor_secundaria: colorSchema,
 });
 
 type StoreFormValues = z.infer<typeof storeSchema>;
@@ -38,7 +44,7 @@ export default function StoreForm() {
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<StoreFormValues>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StoreFormValues>({
     resolver: zodResolver(storeSchema),
     defaultValues: {
       status: "ativa",
@@ -46,8 +52,12 @@ export default function StoreForm() {
       taxa_entrega_padrao: 0,
       latitude: null,
       longitude: null,
+      cor_primaria: DEFAULT_PRIMARY_COLOR,
+      cor_secundaria: DEFAULT_SECONDARY_COLOR,
     }
   });
+  const primaryColorValue = watch("cor_primaria") || DEFAULT_PRIMARY_COLOR;
+  const secondaryColorValue = watch("cor_secundaria") || DEFAULT_SECONDARY_COLOR;
 
   const { data: store, isLoading } = useQuery({
     queryKey: ["store", id],
@@ -72,14 +82,23 @@ export default function StoreForm() {
         taxa_entrega_padrao: Number(store.taxa_entrega_padrao) || 0,
         latitude: store.latitude === null || store.latitude === undefined ? null : Number(store.latitude),
         longitude: store.longitude === null || store.longitude === undefined ? null : Number(store.longitude),
+        cor_primaria: store.cor_primaria || DEFAULT_PRIMARY_COLOR,
+        cor_secundaria: store.cor_secundaria || DEFAULT_SECONDARY_COLOR,
       });
     }
   }, [store, reset, isEditing]);
 
   const mutation = useMutation({
-    mutationFn: (data: StoreFormValues) => {
+    mutationFn: async (data: StoreFormValues) => {
       // Limpa campos vazios para enviar null ao backend
       const payload: Record<string, any> = { ...data };
+      const colors = {
+        cor_primaria: payload.cor_primaria || DEFAULT_PRIMARY_COLOR,
+        cor_secundaria: payload.cor_secundaria || DEFAULT_SECONDARY_COLOR,
+      };
+      delete payload.cor_primaria;
+      delete payload.cor_secundaria;
+
       const optionalFields = ["razao_social", "telefone", "email", "descricao", "logo_url", "horario_abertura", "horario_fechamento"];
       for (const field of optionalFields) {
         if (payload[field] === "") {
@@ -88,9 +107,14 @@ export default function StoreForm() {
       }
 
       if (isEditing) {
-        return storeService.update(id, payload);
+        const updatedStore = await storeService.update(id, payload);
+        await storeService.upsertColors(id, colors);
+        return updatedStore;
       }
-      return storeService.create(payload as any);
+
+      const createdStore = await storeService.create(payload as any);
+      await storeService.upsertColors(createdStore.id, colors);
+      return createdStore;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stores"] });
@@ -184,6 +208,47 @@ export default function StoreForm() {
                   <option value="ativa">Ativa</option>
                   <option value="inativa">Inativa</option>
                 </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Cores do app */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Cores do App</CardTitle>
+            <CardDescription>Defina a identidade visual usada no app do cliente.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cor_primaria">Cor primária <span className="text-red-500">*</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cor_primaria_picker"
+                    type="color"
+                    value={colorSchema.safeParse(primaryColorValue).success ? primaryColorValue : DEFAULT_PRIMARY_COLOR}
+                    onChange={(event) => setValue("cor_primaria", event.target.value, { shouldDirty: true, shouldValidate: true })}
+                    className="h-10 w-14 p-1"
+                  />
+                  <Input id="cor_primaria" placeholder={DEFAULT_PRIMARY_COLOR} {...register("cor_primaria")} className={errors.cor_primaria ? "border-red-500" : ""} />
+                </div>
+                {errors.cor_primaria && <span className="text-xs text-red-500">{errors.cor_primaria.message}</span>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cor_secundaria">Cor secundária <span className="text-red-500">*</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cor_secundaria_picker"
+                    type="color"
+                    value={colorSchema.safeParse(secondaryColorValue).success ? secondaryColorValue : DEFAULT_SECONDARY_COLOR}
+                    onChange={(event) => setValue("cor_secundaria", event.target.value, { shouldDirty: true, shouldValidate: true })}
+                    className="h-10 w-14 p-1"
+                  />
+                  <Input id="cor_secundaria" placeholder={DEFAULT_SECONDARY_COLOR} {...register("cor_secundaria")} className={errors.cor_secundaria ? "border-red-500" : ""} />
+                </div>
+                {errors.cor_secundaria && <span className="text-xs text-red-500">{errors.cor_secundaria.message}</span>}
               </div>
             </div>
           </CardContent>
