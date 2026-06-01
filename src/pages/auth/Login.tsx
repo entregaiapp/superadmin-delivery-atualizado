@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Package } from "lucide-react";
 import {
   MfaLoginStep,
   type MfaSession,
