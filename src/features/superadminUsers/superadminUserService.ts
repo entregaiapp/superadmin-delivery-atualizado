@@ -9,6 +9,7 @@ export const SUPERADMIN_MODULES = [
   { slug: "mercadopago_test", label: "Teste Pagamento" },
   { slug: "audit_logs", label: "Auditoria" },
   { slug: "caixa", label: "Caixa" },
+  { slug: "legal_documents", label: "Documentos legais" },
 ] as const;
 
 export interface SuperadminUser {

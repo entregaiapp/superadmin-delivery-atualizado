@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../features/auth/authService";
-import { LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 
 export default function AdminLayout() {
@@ -36,6 +36,7 @@ export default function AdminLayout() {
     { name: "Teste Pagamento", path: "/settings/mercadopago-test", icon: Settings, slug: "mercadopago_test" },
     { name: "Auditoria", path: "/audit-logs", icon: ClipboardList, slug: "audit_logs" },
     { name: "Segurança", path: "/security", icon: ShieldCheck, slug: "dashboard" },
+    { name: "Documentos legais", path: "/legal-documents", icon: FileText, slug: "legal_documents" },
   ];
 
   const visibleMenuItems = menuItems.filter((item) => canView(item.slug));

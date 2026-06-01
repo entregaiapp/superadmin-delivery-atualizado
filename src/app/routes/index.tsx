@@ -20,6 +20,7 @@ import AuditLogs from "../../pages/settings/AuditLogs";
 import CaixaPlataforma from "../../pages/caixa/CaixaPlataforma";
 import SuperadminUsers from "../../pages/access/SuperadminUsers";
 import SecurityMfa from "../../pages/settings/SecurityMfa";
+import LegalDocumentsEditor from "../../pages/legalDocuments/LegalDocumentsEditor";
 
 export function AppRoutes() {
   return (
@@ -57,6 +58,7 @@ export function AppRoutes() {
         <Route path="caixa" element={<CaixaPlataforma />} />
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="security" element={<SecurityMfa />} />
+        <Route path="legal-documents" element={<LegalDocumentsEditor />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
