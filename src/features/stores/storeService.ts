@@ -33,6 +33,10 @@ export interface StoreColorPayload {
   cor_secundaria: string;
 }
 
+export interface StoreOrderCreationPreference {
+  permitir_criacao_pedidos_delivery_admin: boolean;
+}
+
 const ESTABLISHMENT_TYPES = ["mercado", "lanchonete", "restaurante", "hibrido", "outro"] as const;
 
 function unwrapApiData<T = any>(responseData: any): T {
@@ -121,6 +125,17 @@ export const storeService = {
       loja_id: storeId,
       ...colors,
     });
+    return unwrapApiData(response.data);
+  },
+
+  updateDeliveryOrderCreationPreference: async (
+    storeId: string,
+    preference: StoreOrderCreationPreference,
+  ) => {
+    const configResponse = await api.get(`/lojas/${storeId}/configuracoes`);
+    const config = unwrapApiData<any>(configResponse.data);
+    if (!config?.id) throw new Error("A loja não possui configurações para atualizar.");
+    const response = await api.patch(`/configuracoes_loja/${config.id}`, preference);
     return unwrapApiData(response.data);
   },
 

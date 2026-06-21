@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { storeService } from "../../features/stores/storeService";
+import { api } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
 import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle } from "lucide-react";
@@ -25,6 +26,22 @@ export default function StoreDetails() {
     queryKey: ["store-modules", id],
     queryFn: () => storeService.getModules(id!),
     enabled: Boolean(id),
+  });
+
+  const { data: storeConfig } = useQuery({
+    queryKey: ["store-config", id],
+    queryFn: async () => {
+      const response = await api.get(`/lojas/${id}/configuracoes`);
+      return response.data?.data ?? response.data;
+    },
+    enabled: Boolean(id),
+  });
+
+  const deliveryOrderPreferenceMutation = useMutation({
+    mutationFn: (enabled: boolean) => storeService.updateDeliveryOrderCreationPreference(id!, {
+      permitir_criacao_pedidos_delivery_admin: enabled,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
   });
 
   const moduleMutation = useMutation({
@@ -166,6 +183,20 @@ export default function StoreDetails() {
                   </Badge>
                 </div>
               </div>
+
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                <span>
+                  <span className="block text-sm font-medium">Permitir criação manual de pedidos delivery</span>
+                  <span className="block text-xs text-muted-foreground">Exibe no painel do tenant o fluxo de pedido por telefone/contato.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={storeConfig?.permitir_criacao_pedidos_delivery_admin === true}
+                  disabled={deliveryOrderPreferenceMutation.isPending || !storeConfig?.id}
+                  onChange={(event) => deliveryOrderPreferenceMutation.mutate(event.target.checked)}
+                  className="h-5 w-5 accent-slate-900"
+                />
+              </label>
 
               {store.descricao && (
                 <div>
