@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../features/auth/authService";
-import { Activity, LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText } from "lucide-react";
+import { Activity, LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText, Images } from "lucide-react";
 import { Button } from "../ui/button";
 
 export default function AdminLayout() {
@@ -30,6 +30,7 @@ export default function AdminLayout() {
     { name: "Lojas", path: "/stores", icon: Store, slug: "stores" },
     { name: "Categorias", path: "/products/categories", icon: Tag, slug: "categories" },
     { name: "Produtos", path: "/products", icon: Package, slug: "products" },
+    { name: "Banners globais", path: "/platform-banners", icon: Images, slug: "dashboard" },
     { name: "Caixa", path: "/caixa", icon: WalletCards, slug: "caixa" },
     { name: "Acessos", path: "/access-users", icon: Users, slug: "users" },
     { name: "Regras de Split", path: "/settings/split-rules", icon: Settings, slug: "split_rules" },

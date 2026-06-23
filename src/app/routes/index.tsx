@@ -22,6 +22,7 @@ import SuperadminUsers from "../../pages/access/SuperadminUsers";
 import SecurityMfa from "../../pages/settings/SecurityMfa";
 import LegalDocumentsEditor from "../../pages/legalDocuments/LegalDocumentsEditor";
 import SystemHealth from "../../pages/observability/SystemHealth";
+import PlatformBanners from "../../pages/platformBanners/PlatformBanners";
 
 export function AppRoutes() {
   return (
@@ -50,6 +51,7 @@ export function AppRoutes() {
         <Route path="products/:id/edit" element={<ProdutoForm />} />
         <Route path="products/import" element={<ImportProdutos />} />
         <Route path="products/categories" element={<CategoriasList />} />
+        <Route path="platform-banners" element={<PlatformBanners />} />
         
         {/* Financeiro / Regras de Split */}
         <Route path="settings/split-rules" element={<RegrasSplitList />} />
