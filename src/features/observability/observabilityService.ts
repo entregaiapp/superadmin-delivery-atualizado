@@ -65,6 +65,15 @@ export interface SystemHealthSummary {
   active_critical_incidents: number;
   last_incident_at?: string | null;
   latest_incidents: SystemIncident[];
+  metrics?: {
+    source: "cloud_monitoring";
+    window_minutes: number;
+    request_latency_avg_ms: number | null;
+    request_latency_p95_ms: number | null;
+    database_probe_ms: number | null;
+    backend_summary_ms: number | null;
+    unavailable_reason?: string | null;
+  };
   timestamp: string;
 }
 

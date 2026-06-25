@@ -5,9 +5,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
+  Database,
   Eye,
+  Gauge,
   Loader2,
   RefreshCw,
+  Server,
   ShieldAlert,
   X,
 } from "lucide-react";
@@ -69,6 +72,16 @@ const healthIcon = (status?: SystemHealthStatus) => {
   return CheckCircle2;
 };
 
+const formatMs = (value?: number | null) => (
+  typeof value === "number" && Number.isFinite(value) ? `${value.toLocaleString("pt-BR")} ms` : "Indisponivel"
+);
+
+const metricsUnavailableLabel = (reason?: string | null) => {
+  if (reason === "missing_cloud_monitoring_config") return "Cloud Monitoring nao configurado.";
+  if (reason === "cloud_monitoring_unavailable") return "Cloud Monitoring indisponivel.";
+  return null;
+};
+
 export default function SystemHealth() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<IncidentFilters>({ page: 1, per_page: 20 });
@@ -101,6 +114,8 @@ export default function SystemHealth() {
   });
 
   const incidents = incidentsQuery.data?.data || [];
+  const metrics = summaryQuery.data?.metrics;
+  const metricsIssue = metricsUnavailableLabel(metrics?.unavailable_reason);
   const services = useMemo(() => {
     const values = new Set<string>();
     [...incidents, ...(summaryQuery.data?.latest_incidents || [])].forEach((incident) => {
@@ -136,6 +151,64 @@ export default function SystemHealth() {
           <RefreshCw className={`mr-2 h-4 w-4 ${summaryQuery.isFetching || incidentsQuery.isFetching ? "animate-spin" : ""}`} />
           Atualizar
         </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Gauge className="h-4 w-4 text-blue-600" />
+              Media das requisicoes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatMs(metrics?.request_latency_avg_ms)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {metricsIssue || `Cloud Run nos ultimos ${metrics?.window_minutes || 15} min.`}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Activity className="h-4 w-4 text-purple-600" />
+              P95 das requisicoes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatMs(metrics?.request_latency_p95_ms)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {metricsIssue || "Percentil 95 informado pelo Cloud Monitoring."}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Database className="h-4 w-4 text-emerald-600" />
+              Banco de dados
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatMs(metrics?.database_probe_ms)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Probe leve SELECT 1 executado pelo backend.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Server className="h-4 w-4 text-slate-600" />
+              Resumo do backend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatMs(metrics?.backend_summary_ms)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Tempo para montar este resumo operacional.</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
