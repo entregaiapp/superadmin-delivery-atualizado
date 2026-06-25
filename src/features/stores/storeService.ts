@@ -16,6 +16,13 @@ export interface Store {
   taxa_entrega_padrao: number;
   latitude?: number | null;
   longitude?: number | null;
+  endereco_rua?: string | null;
+  endereco_numero?: string | null;
+  endereco_complemento?: string | null;
+  endereco_bairro?: string | null;
+  endereco_cidade?: string | null;
+  endereco_estado?: string | null;
+  endereco_cep?: string | null;
   cor_primaria?: string | null;
   cor_secundaria?: string | null;
   tipo_estabelecimento: "mercado" | "lanchonete" | "restaurante" | "hibrido" | "outro";

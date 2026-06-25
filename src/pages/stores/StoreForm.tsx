@@ -35,6 +35,13 @@ const storeSchema = z.object({
   taxa_entrega_padrao: z.number().min(0, "Taxa não pode ser negativa"),
   latitude: z.number().min(-90, "Latitude inválida").max(90, "Latitude inválida").nullable().optional(),
   longitude: z.number().min(-180, "Longitude inválida").max(180, "Longitude inválida").nullable().optional(),
+  endereco_rua: z.string().optional().or(z.literal("")),
+  endereco_numero: z.string().optional().or(z.literal("")),
+  endereco_complemento: z.string().optional().or(z.literal("")),
+  endereco_bairro: z.string().optional().or(z.literal("")),
+  endereco_cidade: z.string().optional().or(z.literal("")),
+  endereco_estado: z.string().optional().or(z.literal("")),
+  endereco_cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP invalido").optional().or(z.literal("")),
   cor_primaria: colorSchema,
   cor_secundaria: colorSchema,
   tipo_estabelecimento: z.enum(["mercado", "lanchonete", "restaurante", "hibrido", "outro"]),
@@ -56,6 +63,13 @@ const OPTIONAL_TEXT_FIELDS = [
   "logo_url",
   "horario_abertura",
   "horario_fechamento",
+  "endereco_rua",
+  "endereco_numero",
+  "endereco_complemento",
+  "endereco_bairro",
+  "endereco_cidade",
+  "endereco_estado",
+  "endereco_cep",
 ] as const;
 
 export default function StoreForm() {
@@ -108,6 +122,13 @@ export default function StoreForm() {
         taxa_entrega_padrao: Number(store.taxa_entrega_padrao) || 0,
         latitude: store.latitude === null || store.latitude === undefined ? null : Number(store.latitude),
         longitude: store.longitude === null || store.longitude === undefined ? null : Number(store.longitude),
+        endereco_rua: store.endereco_rua || "",
+        endereco_numero: store.endereco_numero || "",
+        endereco_complemento: store.endereco_complemento || "",
+        endereco_bairro: store.endereco_bairro || "",
+        endereco_cidade: store.endereco_cidade || "",
+        endereco_estado: store.endereco_estado || "",
+        endereco_cep: store.endereco_cep || "",
         cor_primaria: store.cor_primaria || DEFAULT_PRIMARY_COLOR,
         cor_secundaria: store.cor_secundaria || DEFAULT_SECONDARY_COLOR,
         tipo_estabelecimento: store.tipo_estabelecimento || "mercado",
@@ -404,6 +425,42 @@ export default function StoreForm() {
                 <Input id="longitude" type="number" step="0.0000001" min="-180" max="180" placeholder="-34.877000" {...register("longitude", { setValueAs: (value) => value === "" ? null : Number(value) })} className={errors.longitude ? "border-red-500" : ""} />
                 {errors.longitude && <span className="text-xs text-red-500">{errors.longitude.message}</span>}
                 <p className="text-xs text-muted-foreground">Usada como origem das rotas de entrega.</p>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="endereco_rua">Endereco da loja</Label>
+                <Input id="endereco_rua" placeholder="Rua, avenida ou logradouro" {...register("endereco_rua")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_numero">Numero</Label>
+                <Input id="endereco_numero" placeholder="123" {...register("endereco_numero")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_complemento">Complemento</Label>
+                <Input id="endereco_complemento" placeholder="Sala, loja, ponto de referencia" {...register("endereco_complemento")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_bairro">Bairro</Label>
+                <Input id="endereco_bairro" placeholder="Centro" {...register("endereco_bairro")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_cidade">Cidade</Label>
+                <Input id="endereco_cidade" placeholder="Recife" {...register("endereco_cidade")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_estado">Estado</Label>
+                <Input id="endereco_estado" placeholder="PE" maxLength={2} {...register("endereco_estado")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco_cep">CEP</Label>
+                <Input id="endereco_cep" placeholder="00000-000" {...register("endereco_cep")} className={errors.endereco_cep ? "border-red-500" : ""} />
+                {errors.endereco_cep && <span className="text-xs text-red-500">{errors.endereco_cep.message}</span>}
               </div>
             </div>
           </CardContent>
