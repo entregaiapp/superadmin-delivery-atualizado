@@ -47,6 +47,7 @@ const storeSchema = z.object({
   tipo_estabelecimento: z.enum(["mercado", "lanchonete", "restaurante", "hibrido", "outro"]),
   cardapio_configuravel_ativo: z.boolean(),
   visivel_no_app_cliente: z.boolean(),
+  preco_app_taxa_ativa: z.boolean(),
 });
 
 type StoreFormValues = z.infer<typeof storeSchema>;
@@ -92,6 +93,7 @@ export default function StoreForm() {
       tipo_estabelecimento: "mercado",
       cardapio_configuravel_ativo: false,
       visivel_no_app_cliente: true,
+      preco_app_taxa_ativa: false,
     }
   });
   const primaryColorValue = watch("cor_primaria") || DEFAULT_PRIMARY_COLOR;
@@ -134,6 +136,7 @@ export default function StoreForm() {
         tipo_estabelecimento: store.tipo_estabelecimento || "mercado",
         cardapio_configuravel_ativo: Boolean(store.cardapio_configuravel_ativo),
         visivel_no_app_cliente: store.visivel_no_app_cliente !== false,
+        preco_app_taxa_ativa: Boolean(store.preco_app_taxa_ativa),
       });
     }
   }, [store, reset, isEditing]);
@@ -146,6 +149,7 @@ export default function StoreForm() {
         tipo_estabelecimento: data.tipo_estabelecimento,
         cardapio_configuravel_ativo: data.cardapio_configuravel_ativo === true,
         visivel_no_app_cliente: data.visivel_no_app_cliente === true,
+        preco_app_taxa_ativa: data.preco_app_taxa_ativa === true,
       };
 
       for (const field of OPTIONAL_TEXT_FIELDS) {
@@ -279,9 +283,27 @@ export default function StoreForm() {
                   {...register("visivel_no_app_cliente")}
                   className="h-5 w-5 shrink-0 accent-slate-900"
                 />
-              </label>
+            </label>
 
-            </div>
+            <label
+              htmlFor="preco_app_taxa_ativa"
+              className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4 md:col-span-2"
+            >
+              <span>
+                <span className="block text-sm font-semibold">Aplicar taxa de 2% no preço do app</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  O preço do cliente será o valor da loja multiplicado por 1,02 e arredondado para cima no próximo múltiplo de R$ 0,50.
+                </span>
+              </span>
+              <input
+                id="preco_app_taxa_ativa"
+                type="checkbox"
+                {...register("preco_app_taxa_ativa")}
+                className="h-5 w-5 shrink-0 accent-slate-900"
+              />
+            </label>
+
+          </div>
           </CardContent>
         </Card>
 

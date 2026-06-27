@@ -28,6 +28,7 @@ export interface Store {
   tipo_estabelecimento: "mercado" | "lanchonete" | "restaurante" | "hibrido" | "outro";
   cardapio_configuravel_ativo: boolean;
   visivel_no_app_cliente: boolean;
+  preco_app_taxa_ativa: boolean;
   criado_em?: string;
   atualizado_em?: string;
 }
@@ -72,12 +73,16 @@ function normalizeStore(rawStore: any): Store {
   const rawCustomerAppVisibility = rawStore?.visivel_no_app_cliente
     ?? rawStore?.visivelNoAppCliente
     ?? rawStore?.customerAppVisible;
+  const rawAppPriceFee = rawStore?.preco_app_taxa_ativa
+    ?? rawStore?.precoAppTaxaAtiva
+    ?? rawStore?.appPriceFeeEnabled;
 
   return {
     ...rawStore,
     tipo_estabelecimento,
     cardapio_configuravel_ativo: parseBoolean(rawConfigurableMenu, false),
     visivel_no_app_cliente: parseBoolean(rawCustomerAppVisibility, true),
+    preco_app_taxa_ativa: parseBoolean(rawAppPriceFee, false),
   };
 }
 

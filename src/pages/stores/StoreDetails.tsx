@@ -181,6 +181,9 @@ export default function StoreDetails() {
                   <Badge variant={store.visivel_no_app_cliente !== false ? "success" : "secondary"}>
                     App do cliente: {store.visivel_no_app_cliente !== false ? "página principal" : "rota de teste"}
                   </Badge>
+                  <Badge variant={store.preco_app_taxa_ativa ? "success" : "secondary"}>
+                    Preço do app: {store.preco_app_taxa_ativa ? "taxa ativa" : "sem taxa"}
+                  </Badge>
                 </div>
               </div>
 
