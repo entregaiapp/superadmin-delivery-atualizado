@@ -27,6 +27,7 @@ const loginSchema = z.object({
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
+const LOGO_REAL = "/icons/pwa-logo-192.png";
 type ApiError = {
   response?: {
     data?: { error?: string | { message?: string }; message?: string };
@@ -88,11 +89,16 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
       <Card className="w-full max-w-md shadow-lg border-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
         <CardHeader className="space-y-2 text-center pb-8">
-          <div className="flex justify-center mb-4">
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <img
+              src={LOGO_REAL}
+              alt=""
+              className="h-24 w-24 object-contain"
+            />
             <img
               src={logoName}
               alt="Entregaí"
-              className="h-20 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">
