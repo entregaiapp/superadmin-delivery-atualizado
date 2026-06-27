@@ -4,6 +4,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../features/auth/authService";
 import { Activity, LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText, Images } from "lucide-react";
 import { Button } from "../ui/button";
+import logoName from "../../assets/brand/nome-entregai.svg";
+import logoSymbol from "../../assets/brand/logo-entregai.svg";
 
 export default function AdminLayout() {
   const { isAuthenticated, user, setUser, logout } = useAuth();
@@ -52,11 +54,14 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-64 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all">
         <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 font-bold text-lg text-primary">
-            <div className="p-1.5 bg-primary/10 rounded-md">
-              <Store className="w-5 h-5" />
+          <div className="flex items-center gap-3 min-w-0">
+            <img src={logoSymbol} alt="" className="h-9 w-9 shrink-0 object-contain" />
+            <div className="min-w-0">
+              <img src={logoName} alt="Entregaí" className="h-8 w-auto object-contain" />
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                SuperAdmin
+              </div>
             </div>
-            <span>SuperAdmin</span>
           </div>
         </div>
         

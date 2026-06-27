@@ -19,6 +19,7 @@ import {
   MfaLoginStep,
   type MfaSession,
 } from "../../features/auth/MfaLoginStep";
+import logoName from "../../assets/brand/nome-entregai.svg";
 
 const loginSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -30,6 +31,11 @@ type ApiError = {
   response?: {
     data?: { error?: string | { message?: string }; message?: string };
   };
+};
+
+const showPostLoginSplash = () => {
+  sessionStorage.setItem("entregai_post_login_splash", "1");
+  window.dispatchEvent(new Event("entregai-post-login-splash"));
 };
 
 export default function Login() {
@@ -59,6 +65,7 @@ export default function Login() {
           setMfaSession(response);
           return;
         }
+        showPostLoginSplash();
         navigate("/");
       } else {
         setError("Erro ao autenticar. Tente novamente.");
@@ -83,16 +90,16 @@ export default function Login() {
         <CardHeader className="space-y-2 text-center pb-8">
           <div className="flex justify-center mb-4">
             <img
-              src="/image.png"
-              alt="Marca"
-              className="h-16 w-auto object-contain"
+              src={logoName}
+              alt="Entregaí"
+              className="h-20 w-auto object-contain"
             />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">
             Bem-vindo de volta
           </CardTitle>
           <CardDescription>
-            Entre com suas credenciais de Superadmin
+            Entre com suas credenciais do Superadmin Entregaí
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -109,6 +116,7 @@ export default function Login() {
                   session.user,
                   session.refresh_token,
                 );
+                showPostLoginSplash();
                 navigate("/");
               }}
             />
