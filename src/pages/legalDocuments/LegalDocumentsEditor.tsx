@@ -15,7 +15,7 @@ import {
 const DOCUMENT_KEY = "privacy-policy";
 
 const defaultForm: SaveLegalDocumentPayload = {
-  title: "Política de Privacidade",
+  title: "Termos de Uso e Política de Privacidade",
   version: "1.0.0",
   content_markdown: "",
   status: "draft",
@@ -73,7 +73,7 @@ export default function LegalDocumentsEditor() {
     mutationFn: () => legalDocumentService.save(DOCUMENT_KEY, form),
     onSuccess: (document) => {
       setError("");
-      setSuccess(document.status === "published" ? "Política publicada para todos os tenants." : "Rascunho salvo.");
+      setSuccess(document.status === "published" ? "Documento legal publicado para todos os tenants." : "Rascunho salvo.");
       queryClient.invalidateQueries({ queryKey: ["legal-document", DOCUMENT_KEY] });
     },
     onError: (err) => {
@@ -114,7 +114,7 @@ export default function LegalDocumentsEditor() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Documentos legais</h2>
         <p className="text-muted-foreground text-sm">
-          Edite a Política de Privacidade global. O conteúdo publicado aqui é usado por todos os tenants.
+          Edite os Termos de Uso e a Política de Privacidade globais. O conteúdo publicado aqui é usado por todos os tenants.
         </p>
       </div>
 
@@ -123,7 +123,7 @@ export default function LegalDocumentsEditor() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
-              Política de Privacidade
+              Termos de Uso e Política de Privacidade
             </CardTitle>
             <CardDescription>
               Use Markdown. Ao salvar como publicado, a versão anterior publicada será arquivada automaticamente.
@@ -172,7 +172,7 @@ export default function LegalDocumentsEditor() {
                   className="min-h-[520px] w-full rounded-md border border-input bg-transparent px-3 py-3 font-mono text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={form.content_markdown}
                   onChange={(event) => setForm({ ...form, content_markdown: event.target.value })}
-                  placeholder="# Política de Privacidade..."
+                  placeholder="# Termos de Uso e Política de Privacidade..."
                   required
                 />
               </div>
