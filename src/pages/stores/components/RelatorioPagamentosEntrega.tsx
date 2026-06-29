@@ -264,7 +264,7 @@ export default function RelatorioPagamentosEntrega({
                       <TableCell className="font-medium">{order.numero_pedido}</TableCell>
                       <TableCell>{formatDateTime(order.realizado_em)}</TableCell>
                       <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
-                      <TableCell>{order.contabiliza_plataforma ? "Cliente" : "Manual"}</TableCell>
+                      <TableCell>{order.origem_relatorio === "manual" ? "Manual" : "Cliente"}</TableCell>
                       <TableCell className="capitalize">{order.pagamento_entrega_tipo}</TableCell>
                       <TableCell>{money(order.total)}</TableCell>
                       <TableCell className="font-semibold">{money(order.valor_cobranca)}</TableCell>
