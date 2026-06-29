@@ -9,6 +9,7 @@ import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, Fi
 import { Badge } from "../../components/ui/badge";
 import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 import AdminsLoja from "./components/AdminsLoja";
+import RelatorioPagamentosEntrega from "./components/RelatorioPagamentosEntrega";
 
 type StoreTab = "dados" | "administradores" | "financeiro" | "modulos";
 
@@ -364,7 +365,10 @@ export default function StoreDetails() {
       )}
 
       {activeTab === "financeiro" && (
-        <ContasFinanceirasLoja lojaId={store.id} />
+        <div className="space-y-6">
+          <RelatorioPagamentosEntrega lojaId={store.id} storeConfig={storeConfig} />
+          <ContasFinanceirasLoja lojaId={store.id} />
+        </div>
       )}
 
       {activeTab === "modulos" && (

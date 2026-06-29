@@ -51,6 +51,76 @@ export interface StoreCpfInvoicePreference {
   permitir_cpf_na_nota_cliente: boolean;
 }
 
+export interface DeliveryPaymentBillingReportFilters {
+  dataInicio: string;
+  dataFim: string;
+}
+
+export interface DeliveryPaymentBillingReport {
+  id?: string;
+  loja: {
+    id: string;
+    nome: string;
+    cnpj?: string | null;
+  };
+  periodo: {
+    data_inicio: string;
+    data_fim: string;
+    time_zone: string;
+  };
+  regra_split: null | {
+    id: string;
+    nome: string;
+    gateway: string;
+    tipo_valor: "percentual" | "fixo" | string;
+    valor: number;
+  };
+  resumo: {
+    quantidade_pedidos_clientes: number;
+    quantidade_pedidos_manuais: number;
+    quantidade_pedidos_total: number;
+    valor_bruto_clientes: number;
+    valor_bruto_manuais: number;
+    valor_bruto_total: number;
+    valor_final_cobranca: number;
+  };
+  dias: Array<{
+    data: string;
+    quantidade_pedidos_clientes: number;
+    quantidade_pedidos_manuais: number;
+    quantidade_pedidos_total: number;
+    valor_bruto_clientes: number;
+    valor_bruto_manuais: number;
+    valor_bruto_total: number;
+    valor_a_receber: number;
+  }>;
+  pedidos: Array<{
+    id: string;
+    numero_pedido: string;
+    data: string;
+    realizado_em: string;
+    status: string;
+    origem_checkout?: string | null;
+    origem_relatorio: "cliente" | "manual" | string;
+    contabiliza_plataforma: boolean;
+    tipo_pedido: string;
+    forma_pagamento: string;
+    pagamento_status: string;
+    pagamento_entrega_tipo: "dinheiro" | "cartao" | string;
+    subtotal: number;
+    desconto: number;
+    taxa_entrega: number;
+    total: number;
+    valor_cobranca: number;
+    valor_taxa_calculada: number;
+  }>;
+  gerado_em?: string;
+  gerado_por?: {
+    id?: string | null;
+    nome?: string | null;
+  };
+}
+
 const ESTABLISHMENT_TYPES = ["mercado", "lanchonete", "restaurante", "hibrido", "outro"] as const;
 
 function unwrapApiData<T = any>(responseData: any): T {
@@ -193,6 +263,14 @@ export const storeService = {
 
   updateModules: async (id: string, modules: Array<{ slug: string; enabled: boolean; config?: Record<string, unknown> }>) => {
     const response = await api.put(`/salao/lojas/${id}/modulos`, { modules });
+    return unwrapApiData(response.data);
+  },
+
+  getDeliveryPaymentBillingReport: async (
+    storeId: string,
+    params: DeliveryPaymentBillingReportFilters,
+  ): Promise<DeliveryPaymentBillingReport> => {
+    const response = await api.post(`/caixa-plataforma/lojas/${storeId}/relatorios-pagamentos-entrega`, params);
     return unwrapApiData(response.data);
   }
 };
