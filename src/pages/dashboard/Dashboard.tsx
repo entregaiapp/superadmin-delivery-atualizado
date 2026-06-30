@@ -64,9 +64,73 @@ function labelSituacaoFinanceira(value: string | undefined | null) {
     rejeitado: "Rejeitado",
     cancelado: "Cancelado",
     estornado: "Estornado",
+    expirado: "Expirado",
     indefinido: "Indefinido",
   };
   return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
+}
+
+type PaymentMethodSummary = {
+  metodo_pagamento?: string | null;
+  valor_recebido?: number | string;
+  valor_previsto_receber?: number | string;
+};
+
+type PaymentChannelSummary = {
+  canal_pagamento?: string | null;
+  quantidade?: number | string;
+  valor_total?: number | string;
+  valor_recebido?: number | string;
+  valor_previsto_receber?: number | string;
+  recebidos?: number | string;
+  previstos?: number | string;
+};
+
+type PaymentStatusSummary = {
+  situacao_financeira?: string | null;
+  pagamento_status?: string | null;
+  valor_total?: number | string;
+  quantidade?: number | string;
+};
+
+type PaymentMethodChannelSummary = {
+  metodo_pagamento?: string | null;
+  canal_pagamento?: string | null;
+  situacao_financeira?: string | null;
+  quantidade?: number | string;
+  valor_total?: number | string;
+  valor_liquido?: number | string;
+  taxas_gateway?: number | string;
+};
+
+type StoreExperienceSummary = {
+  id: string;
+  nome: string;
+  total_avaliacoes?: number | string;
+  nota_media?: number | string;
+  otimo?: number | string;
+  bom?: number | string;
+  ruim?: number | string;
+};
+
+function MetricHelp({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex shrink-0 items-center">
+      <button
+        type="button"
+        className="group/help inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={text}
+      >
+        <Info className="h-3.5 w-3.5" />
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute right-0 top-6 z-50 hidden w-72 rounded-md border bg-popover px-3 py-2 text-left text-xs font-normal leading-5 text-popover-foreground shadow-lg group-hover/help:block group-focus-visible/help:block"
+        >
+          {text}
+        </span>
+      </button>
+    </span>
+  );
 }
 
 function StatCard({ title, value, icon: Icon, sub, color = "text-primary", trend, help }: {
@@ -79,11 +143,14 @@ function StatCard({ title, value, icon: Icon, sub, color = "text-primary", trend
   help: string;
 }) {
   return (
-    <Card className="relative flex h-full min-h-[140px] flex-col overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+    <Card className="relative flex h-full min-h-[140px] flex-col overflow-visible group hover:shadow-lg transition-shadow duration-300">
       <div className={`absolute inset-0 opacity-[0.03] ${color.replace("text-", "bg-")}`} />
       <CardHeader className="relative flex min-h-[64px] flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium leading-5 text-muted-foreground">{title}</CardTitle>
-        <div className={`shrink-0 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 ${color}`} title={help}>
+        <CardTitle className="flex items-start gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
+          <span>{title}</span>
+          <MetricHelp text={help} />
+        </CardTitle>
+        <div className={`shrink-0 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 ${color}`} aria-hidden="true">
           <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
@@ -101,6 +168,8 @@ function StatCard({ title, value, icon: Icon, sub, color = "text-primary", trend
   );
 }
 
+// A API ainda retorna dois formatos diferentes para plataforma e loja; este adaptador centraliza essa compatibilidade.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeDashboard(m: any) {
   if (m?.resumo) {
     return {
@@ -114,10 +183,13 @@ function normalizeDashboard(m: any) {
       cupons: m.cupons,
       auditoria: m.auditoria,
       experienciaCompra: m.experiencia_compra || { resumo: {}, por_loja: [] },
-      topLojas: (m.rankings?.top_lojas_faturamento || []).slice(0, 5).map((l: any) => ({
-        nome: l.nome?.length > 18 ? `${l.nome.slice(0, 18)}...` : l.nome,
-        faturamento: Number(l.faturamento),
-      })),
+      topLojas: (m.rankings?.top_lojas_faturamento || []).slice(0, 5).map((l: { nome?: string; faturamento?: number | string }) => {
+        const nome = l.nome || "Sem nome";
+        return {
+          nome: nome.length > 18 ? `${nome.slice(0, 18)}...` : nome,
+          faturamento: Number(l.faturamento),
+        };
+      }),
       gerado_em: m.gerado_em,
     };
   }
@@ -199,8 +271,13 @@ function normalizeDashboard(m: any) {
 }
 
 export default function Dashboard() {
-  const today = dateInputInBrasilia();
-  const thirtyDaysAgo = dateInputInBrasilia(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000));
+  const [{ today, thirtyDaysAgo }] = useState(() => {
+    const now = new Date();
+    return {
+      today: dateInputInBrasilia(now),
+      thirtyDaysAgo: dateInputInBrasilia(new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)),
+    };
+  });
   const [dataInicio, setDataInicio] = useState(thirtyDaysAgo);
   const [dataFim, setDataFim] = useState(today);
   const [lojaId, setLojaId] = useState("");
@@ -262,12 +339,33 @@ export default function Dashboard() {
   const fin = m.financeiro;
   const pagamentosDetalhados = fin.pagamentos_detalhados || {};
   const resumoPagamentos = pagamentosDetalhados.resumo || {};
-  const pagamentosPorForma = pagamentosDetalhados.por_forma_pagamento || [];
-  const pagamentosPorCanal = pagamentosDetalhados.por_canal_pagamento || [];
-  const pagamentosPorFormaCanal = pagamentosDetalhados.por_forma_e_canal || [];
-  const pagamentosPorStatus = pagamentosDetalhados.por_status || [];
+  const pagamentosPorForma = (pagamentosDetalhados.por_forma_pagamento || []) as PaymentMethodSummary[];
+  const pagamentosPorCanal = (pagamentosDetalhados.por_canal_pagamento || []) as PaymentChannelSummary[];
+  const pagamentosPorFormaCanal = (pagamentosDetalhados.por_forma_e_canal || []) as PaymentMethodChannelSummary[];
+  const pagamentosPorStatus = (pagamentosDetalhados.por_status || []) as PaymentStatusSummary[];
   const experiencia = m.experienciaCompra?.resumo || {};
-  const experienciaPorLoja = m.experienciaCompra?.por_loja || [];
+  const experienciaPorLoja = (m.experienciaCompra?.por_loja || []) as StoreExperienceSummary[];
+  const totalPagamentosDetalhados = resumoPagamentos.total_pagamentos ?? fin.pagamentos.total_pagamentos;
+  const pagamentosRecebidos = resumoPagamentos.pagamentos_recebidos ?? fin.pagamentos.pagamentos_aprovados;
+  const valorRecebido = resumoPagamentos.valor_recebido ?? fin.pagamentos.valor_total_aprovado;
+  const valorLiquidoRecebido = resumoPagamentos.valor_liquido_recebido ?? fin.pagamentos.valor_liquido_total;
+  const taxasGatewayRecebidas = resumoPagamentos.taxas_gateway_recebidas ?? fin.pagamentos.total_taxas_gateway;
+  const valorRegistrado = resumoPagamentos.valor_total_registrado ?? ped.valor_total_pedidos;
+  const pagamentosPrevistos = resumoPagamentos.pagamentos_previstos ?? fin.pagamentos.pagamentos_pendentes;
+  const valorPrevisto = resumoPagamentos.valor_previsto_receber ?? 0;
+  const pagamentosEstornados = resumoPagamentos.pagamentos_estornados ?? fin.estornos.estornos_aprovados;
+  const valorEstornado = resumoPagamentos.valor_estornado ?? fin.estornos.valor_total_estornado;
+  const resumoCanal = (canal: "entrega" | "app") =>
+    pagamentosPorCanal.find((item) => item.canal_pagamento === canal) || {
+      quantidade: 0,
+      valor_total: 0,
+      valor_recebido: 0,
+      valor_previsto_receber: 0,
+      recebidos: 0,
+      previstos: 0,
+    };
+  const canalEntrega = resumoCanal("entrega");
+  const canalApp = resumoCanal("app");
 
   return (
     <div className="space-y-6">
@@ -316,42 +414,41 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Lojas Ativas" value={num(r.lojas_ativas)} icon={Store}
           sub={`${num(r.total_lojas)} total · ${num(r.lojas_inativas)} inativas`} color="text-indigo-500"
-          help="Quantidade de lojas ativas no escopo selecionado." />
+          help="Quantidade de lojas cadastradas com status ativo. O total e as inativas mostram a situação atual do cadastro no escopo selecionado." />
         <StatCard title="Clientes Ativos" value={num(r.clientes_ativos)} icon={Users}
           sub={`${num(r.total_clientes)} total · ${num(r.clientes_bloqueados)} bloqueados`} color="text-cyan-500"
-          help="Clientes contabilizados para o período e loja selecionados." />
+          help="Clientes cadastrados que não estão bloqueados. Esta é uma contagem cadastral do escopo selecionado, não uma soma de compras do período." />
         <StatCard title="Faturamento (Entregues)" value={fmt(ped.valor_pedidos_entregues)} icon={DollarSign}
           sub={`${fmt(ped.valor_total_pedidos)} em pedidos totais`} color="text-emerald-500" trend="up"
-          help="Soma dos pedidos entregues dentro dos filtros aplicados." />
-        <StatCard title="Ticket Médio" value={fmt(ped.ticket_medio)} icon={TrendingUp}
+          help="Soma do campo total apenas dos pedidos com status entregue dentro do período filtrado. O subtítulo mostra o valor bruto de todos os pedidos do período, incluindo outros status." />
+        <StatCard title="Ticket Médio dos Pedidos" value={fmt(ped.ticket_medio)} icon={TrendingUp}
           sub={`${num(ped.total_pedidos)} pedidos realizados`} color="text-violet-500"
-          help="Valor médio dos pedidos no escopo selecionado." />
+          help="Média do valor total dos pedidos criados ou realizados no período filtrado. Pode incluir pedidos ainda não entregues, cancelados ou não concluídos conforme vierem da base de pedidos." />
         <StatCard title="Pedidos Totais" value={num(ped.total_pedidos)} icon={ShoppingCart}
           sub={`${num(ped.pedidos_entregues)} entregues · ${num(ped.pedidos_cancelados)} cancelados`} color="text-blue-500"
-          help="Total de pedidos criados ou realizados dentro dos filtros." />
+          help="Quantidade de pedidos encontrados no período filtrado, somando todos os status. Use entregues e cancelados no subtítulo para comparar conversão operacional." />
         <StatCard title="Experiência" value={num(experiencia.total_avaliacoes)} icon={Smile}
           sub={`${num(experiencia.otimo)} ótimo · ${num(experiencia.bom)} bom · ${num(experiencia.ruim)} ruim`}
           color="text-rose-500"
-          help="Avaliações simples enviadas pelos clientes ao fim do pedido." />
+          help="Total de avaliações simples registradas pelos clientes no fim do pedido dentro do período filtrado, separadas entre ótimo, bom e ruim." />
         <StatCard title="Produtos Ativos" value={num(r.produtos_ativos)} icon={Package}
           sub={`${num(r.total_produtos)} total · ${num(r.total_categorias)} categorias`} color="text-orange-500"
-          help="Produtos ativos disponíveis no escopo selecionado." />
+          help="Produtos com status ativo no cadastro atual do escopo selecionado. O total inclui todos os produtos cadastrados, ativos ou não." />
         <StatCard title="Entregadores Ativos" value={num(r.entregadores_ativos)} icon={Truck}
           sub={`${num(r.total_entregadores)} cadastrados`} color="text-teal-500"
-          help="Entregadores cadastrados ou ativos para o escopo atual." />
+          help="Entregadores com status ativo no cadastro atual. O subtítulo mostra todos os entregadores cadastrados no escopo selecionado." />
         <StatCard title="Usuários do Sistema" value={num(r.usuarios_ativos)} icon={UserCheck}
           sub={`${num(r.total_usuarios)} total · ${num(r.total_users_sistema)} users auth`} color="text-pink-500"
-          help="Usuários administrativos cadastrados no sistema." />
+          help="Usuários administrativos ativos no cadastro da plataforma. O total mostra usuários administrativos cadastrados; users auth mostra registros vinculados à autenticação quando disponível." />
       </div>
 
       {m.topLojas.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <span title="Ranking das lojas com maior faturamento no período.">
-                <TrendingUp className="h-4 w-4 text-primary" />
-              </span>
+              <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
               Top Lojas por Faturamento
+              <MetricHelp text="Ranking das lojas com maior soma de pedidos entregues dentro do período filtrado. O gráfico usa o mesmo conceito do card Faturamento (Entregues)." />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -360,7 +457,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} stroke="hsl(var(--muted-foreground))" />
                 <YAxis type="category" dataKey="nome" width={140} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip formatter={(v: any) => fmt(v)} />
+                <Tooltip formatter={(v) => fmt(v as number | string | undefined)} />
                 <Bar dataKey="faturamento" fill="#6366f1" radius={[0, 6, 6, 0]} name="Faturamento" />
               </BarChart>
             </ResponsiveContainer>
@@ -372,13 +469,14 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Smile className="h-4 w-4 text-rose-500" />
+              <Smile className="h-4 w-4 text-rose-500" aria-hidden="true" />
               Experiência por Loja
+              <MetricHelp text="Lista as lojas com avaliações registradas no período filtrado. A média usa ruim como 1, bom como 2 e ótimo como 3." />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="divide-y">
-              {experienciaPorLoja.slice(0, 6).map((item: any) => (
+              {experienciaPorLoja.slice(0, 6).map((item) => (
                 <div key={item.id} className="flex items-center justify-between gap-4 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.nome}</p>
@@ -399,79 +497,80 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Pagamentos Aprovados" value={fmt(fin.pagamentos.valor_total_aprovado)} icon={CreditCard}
-          sub={`${num(fin.pagamentos.pagamentos_aprovados)} de ${num(fin.pagamentos.total_pagamentos)}`} color="text-emerald-500" trend="up"
-          help="Valor aprovado em pagamentos dentro do filtro atual." />
-        <StatCard title="Valor Líquido" value={fmt(fin.pagamentos.valor_liquido_total)} icon={DollarSign}
-          sub={`Taxas gateway: ${fmt(fin.pagamentos.total_taxas_gateway)}`} color="text-green-500"
-          help="Valor aprovado descontando taxas conhecidas do gateway." />
-        <StatCard title="Estornos" value={fmt(fin.estornos.valor_total_estornado)} icon={RefreshCw}
-          sub={`${num(fin.estornos.estornos_aprovados)} aprovados · ${num(fin.estornos.estornos_pendentes)} pendentes`}
-          color="text-amber-500" trend={Number(fin.estornos.total_estornos) > 0 ? "down" : "neutral"}
-          help="Total de valores estornados no período selecionado." />
+        <StatCard title="Pagamentos Recebidos" value={fmt(valorRecebido)} icon={CreditCard}
+          sub={`${num(pagamentosRecebidos)} de ${num(totalPagamentosDetalhados)} pagamento(s)`} color="text-emerald-500" trend="up"
+          help="Soma apenas dos pagamentos classificados como recebidos: status aprovado ou pagamento com data de recebimento, sem contar cancelados, rejeitados, expirados ou estornados." />
+        <StatCard title="Valor Líquido Recebido" value={fmt(valorLiquidoRecebido)} icon={DollarSign}
+          sub={`Taxas do gateway recebidas: ${fmt(taxasGatewayRecebidas)}`} color="text-green-500"
+          help="Valor recebido descontando as taxas de gateway registradas nos próprios pagamentos recebidos. Pagamentos na entrega normalmente não têm taxa de gateway." />
+        <StatCard title="Pagamentos Estornados" value={fmt(valorEstornado)} icon={RefreshCw}
+          sub={`${num(pagamentosEstornados)} pagamento(s) estornado(s)`}
+          color="text-amber-500" trend={Number(pagamentosEstornados) > 0 ? "down" : "neutral"}
+          help="Soma dos pagamentos cujo status financeiro é estornado. Esses valores não entram em Pagamentos Recebidos, mesmo que tenham data de pagamento registrada." />
         <StatCard title="Splits Transferidos" value={fmt(fin.splits.valor_liquido_transferido)} icon={ArrowUpRight}
           sub={`${num(fin.splits.splits_transferidos)} de ${num(fin.splits.total_splits)} · ${num(fin.splits.splits_pendentes)} pendentes`}
           color="text-indigo-500"
-          help="Valor líquido já transferido em splits de pagamento." />
+          help="Valor líquido de splits que já foram transferidos para as contas configuradas. Pendentes ainda aguardam processamento ou confirmação do provedor." />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Recebido Real" value={fmt(resumoPagamentos.valor_recebido)} icon={DollarSign}
-          sub={`${num(resumoPagamentos.pagamentos_recebidos)} pagamento(s) recebido(s)`}
-          color="text-emerald-500" trend="up"
-          help="Pagamentos aprovados ou com data de recebimento registrada." />
-        <StatCard title="Previsto a Receber" value={fmt(resumoPagamentos.valor_previsto_receber)} icon={Clock}
-          sub={`${num(resumoPagamentos.pagamentos_previstos)} pagamento(s) pendente(s)`}
+        <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
+          sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
+          color="text-slate-500"
+          help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
+        <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
+          sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
           color="text-amber-500"
-          help="Pagamentos pendentes ou em processamento que ainda devem ser recebidos." />
-        <StatCard title="Pagamento na Entrega" value={fmt(resumoPagamentos.valor_na_entrega)} icon={Truck}
-          sub={`${num(resumoPagamentos.pagamentos_na_entrega)} dinheiro/cartão na entrega`}
+          help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
+        <StatCard title="Recebido na Entrega" value={fmt(canalEntrega.valor_recebido)} icon={Truck}
+          sub={`${num(canalEntrega.recebidos)} recebido(s) · ${fmt(canalEntrega.valor_total)} registrado(s)`}
           color="text-cyan-500"
-          help="Pagamentos marcados para cobrança presencial na entrega." />
-        <StatCard title="Pagamento no App" value={fmt(resumoPagamentos.valor_no_app)} icon={CreditCard}
-          sub={`${num(resumoPagamentos.pagamentos_no_app)} pix/cartão processados no app`}
+          help="Parte recebida dos pagamentos marcados para cobrança presencial na entrega, como dinheiro ou cartão sem gateway. O valor registrado no subtítulo inclui todos os status desse canal." />
+        <StatCard title="Recebido no App" value={fmt(canalApp.valor_recebido)} icon={CreditCard}
+          sub={`${num(canalApp.recebidos)} recebido(s) · ${fmt(canalApp.valor_total)} registrado(s)`}
           color="text-violet-500"
-          help="Pagamentos processados pelo checkout do app." />
+          help="Parte recebida dos pagamentos processados pelo checkout do app, como PIX ou cartão via gateway. O valor registrado no subtítulo inclui aprovados, pendentes, rejeitados, cancelados, expirados e estornados." />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <MiniSummary icon={DollarSign} title="Recebido por Forma" color="text-emerald-500" rows={
+        <MiniSummary icon={DollarSign} title="Por Forma de Pagamento" color="text-emerald-500" rows={
           pagamentosPorForma.length
-            ? pagamentosPorForma.map((item: any) => [
+            ? pagamentosPorForma.map((item) => [
                 labelMetodoPagamento(item.metodo_pagamento),
-                `${fmt(item.valor_recebido)} / ${fmt(item.valor_previsto_receber)}`,
+                `${fmt(item.valor_recebido)} receb. · ${fmt(item.valor_previsto_receber)} prev.`,
               ])
             : [["Sem dados", fmt(0)]]
-        } help="Valor recebido e valor previsto por dinheiro, cartão, PIX e outros métodos." />
-        <MiniSummary icon={Truck} title="Recebido por Canal" color="text-cyan-500" rows={
+        } help="Mostra quanto já foi recebido e quanto ainda está previsto por forma de pagamento. Valores rejeitados, cancelados, expirados ou estornados aparecem na distribuição de Status Financeiro." />
+        <MiniSummary icon={Truck} title="Por Canal de Pagamento" color="text-cyan-500" rows={
           pagamentosPorCanal.length
-            ? pagamentosPorCanal.map((item: any) => [
+            ? pagamentosPorCanal.map((item) => [
                 labelCanalPagamento(item.canal_pagamento),
-                `${fmt(item.valor_recebido)} / ${fmt(item.valor_previsto_receber)}`,
+                `${fmt(item.valor_recebido)} receb. · ${fmt(item.valor_previsto_receber)} prev.`,
               ])
             : [["Sem dados", fmt(0)]]
-        } help="Separação entre pagamentos no app e pagamentos na entrega." />
+        } help="Separa pagamentos do checkout do app e pagamentos cobrados na entrega. Cada linha exibe apenas o valor recebido e o valor previsto desse canal." />
         <MiniSummary icon={AlertTriangle} title="Status Financeiro" color="text-amber-500" rows={
           pagamentosPorStatus.length
-            ? pagamentosPorStatus.slice(0, 5).map((item: any) => [
+            ? pagamentosPorStatus.map((item) => [
                 `${labelSituacaoFinanceira(item.situacao_financeira)} (${item.pagamento_status || "-"})`,
                 `${fmt(item.valor_total)} · ${num(item.quantidade)}`,
               ])
             : [["Sem dados", fmt(0)]]
-        } help="Distribuição do dinheiro recebido, previsto, rejeitado, cancelado ou estornado." />
+        } help="Agrupa os pagamentos pela situação financeira usada nos cards e pelo status original gravado no pagamento. É a melhor visão para explicar diferenças entre total registrado e recebido." />
       </div>
 
       {pagamentosPorFormaCanal.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="h-4 w-4 text-primary" />
+              <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
               Detalhamento de Pagamentos
+              <MetricHelp text="Quebra os pagamentos por forma, canal e situação financeira. Use esta seção para conferir quais valores foram recebidos, previstos, rejeitados, cancelados, expirados ou estornados." />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {pagamentosPorFormaCanal.map((item: any) => (
+              {pagamentosPorFormaCanal.map((item) => (
                 <div key={`${item.metodo_pagamento}-${item.canal_pagamento}-${item.situacao_financeira}`} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -500,35 +599,34 @@ export default function Dashboard() {
           ["Aguardando", num(m.entregas.entregas_aguardando)],
           ["Em andamento", num(m.entregas.entregas_em_andamento)],
           ["Concluídas", num(m.entregas.entregas_concluidas)],
-        ]} help="Resumo operacional das entregas no escopo selecionado." />
+        ]} help="Resumo operacional das entregas registradas no escopo selecionado. A plataforma geral pode representar o estado atual das entregas, não necessariamente apenas o período dos pedidos." />
         <MiniSummary icon={Box} title="Estoque" color="text-orange-500" rows={[
           ["Registros", num(m.estoque.total_registros_estoque)],
           ["Estoque baixo", num(m.estoque.produtos_estoque_baixo)],
           ["Sem estoque", num(m.estoque.produtos_sem_estoque)],
           ["Reservados", num(m.estoque.total_quantidade_reservada)],
-        ]} help="Alertas e volume de estoque para a seleção atual." />
+        ]} help="Situação atual dos registros de estoque no escopo selecionado. Estoque baixo compara quantidade disponível com quantidade mínima; sem estoque indica quantidade disponível igual a zero." />
         <MiniSummary icon={ShoppingCart} title="Carrinhos" color="text-violet-500" rows={[
           ["Total", num(m.carrinhos.total_carrinhos)],
           ["Ativos", num(m.carrinhos.carrinhos_ativos)],
           ["Convertidos", num(m.carrinhos.carrinhos_convertidos)],
           ["Abandonados", num(m.carrinhos.carrinhos_abandonados)],
-        ]} help="Resumo de carrinhos registrados na plataforma." />
+        ]} help="Resumo dos carrinhos registrados por status. Ativos ainda estão em aberto, convertidos viraram pedido e abandonados ficaram sem conclusão." />
         <MiniSummary icon={Ticket} title="Cupons & Auditoria" color="text-pink-500" rows={[
           ["Cupons ativos", num(r.cupons_ativos)],
           ["Usos de cupom", num(m.cupons.total_usos)],
           ["Logs auditoria", num(m.auditoria.total_logs)],
           ["Webhooks", `${num(fin.webhooks.processadas)}/${num(fin.webhooks.total_notificacoes)}`],
-        ]} help="Acompanhamento de cupons, auditoria e notificações de pagamento." />
+        ]} help="Acompanha cupons ativos, uso de cupons, logs administrativos e webhooks de pagamento processados. Em Webhooks, o formato é processados sobre total recebido." />
       </div>
 
       {(Number(m.estoque.produtos_sem_estoque) > 0 || Number(fin.webhooks.com_erro) > 0 || Number(fin.pagamentos.pagamentos_rejeitados) > 0) && (
         <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <span title="Alertas que exigem atenção operacional.">
-                <AlertTriangle className="h-4 w-4" />
-              </span>
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               Alertas
+              <MetricHelp text="Mostra somente indicadores que precisam de atenção operacional, como produto sem estoque, webhook com erro ou pagamento rejeitado." />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
@@ -553,13 +651,9 @@ function MiniSummary({ icon: Icon, title, rows, color, help }: {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <span title={help}>
-            <Icon className={`h-4 w-4 ${color}`} />
-          </span>
+          <Icon className={`h-4 w-4 ${color}`} aria-hidden="true" />
           {title}
-          <span title={help}>
-            <Info className="h-3.5 w-3.5 text-muted-foreground" />
-          </span>
+          <MetricHelp text={help} />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
