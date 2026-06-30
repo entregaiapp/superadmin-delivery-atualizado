@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, RefreshCw, Eye, Search, AlertCircle, Calendar, X } from 'lucide-react';
+import { ClipboardList, RefreshCw, Eye, Search, AlertCircle, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatBrasiliaDate } from '../../lib/dateTime';
 
@@ -15,18 +15,24 @@ interface AuditLog {
   criado_em: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/logs_auditoria');
+      const response = await api.get('/logs_auditoria', {
+        params: { page, per_page: PAGE_SIZE },
+      });
       if (response.data?.success) {
         const payloadData = response.data.data;
         if (Array.isArray(payloadData)) {
@@ -34,6 +40,10 @@ export default function AuditLogs() {
         } else if (payloadData && Array.isArray(payloadData.data)) {
           // Handles paginated responses
           setLogs(payloadData.data);
+          setPagination({
+            total: Number(payloadData.total || 0),
+            total_pages: Math.max(1, Number(payloadData.total_pages || 1)),
+          });
         } else {
           setLogs([]);
         }
@@ -50,7 +60,7 @@ export default function AuditLogs() {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [page]);
 
   const getActionColor = (acao: string) => {
     switch (acao) {
@@ -97,7 +107,7 @@ export default function AuditLogs() {
           </p>
         </div>
         <button
-          onClick={fetchLogs}
+          onClick={() => fetchLogs()}
           disabled={loading}
           className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
         >
@@ -203,6 +213,32 @@ export default function AuditLogs() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <div className="text-sm text-slate-500">
+          Página {page} de {pagination.total_pages} · {pagination.total} log(s)
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={loading || page <= 1}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Anterior
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(pagination.total_pages, current + 1))}
+            disabled={loading || page >= pagination.total_pages}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Próxima
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Details Modal */}

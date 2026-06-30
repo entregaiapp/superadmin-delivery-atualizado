@@ -24,6 +24,7 @@ import SecurityMfa from "../../pages/settings/SecurityMfa";
 import LegalDocumentsEditor from "../../pages/legalDocuments/LegalDocumentsEditor";
 import SystemHealth from "../../pages/observability/SystemHealth";
 import PlatformBanners from "../../pages/platformBanners/PlatformBanners";
+import CustomerFeedbacks from "../../pages/feedbacks/CustomerFeedbacks";
 
 export function AppRoutes() {
   return (
@@ -62,6 +63,7 @@ export function AppRoutes() {
         <Route path="settings/pagarme-marketplace" element={<PagarmeMarketplace />} />
         <Route path="caixa" element={<CaixaPlataforma />} />
         <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="feedbacks" element={<CustomerFeedbacks />} />
         <Route path="security" element={<SecurityMfa />} />
         <Route path="legal-documents" element={<LegalDocumentsEditor />} />
         <Route path="system-health" element={<SystemHealth />} />

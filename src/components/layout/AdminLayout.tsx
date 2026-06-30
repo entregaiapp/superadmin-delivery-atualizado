@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../features/auth/authService";
-import { Activity, LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText, Images } from "lucide-react";
+import { Activity, LayoutDashboard, Store, Users, LogOut, Settings, Package, Tag, ClipboardList, WalletCards, ShieldCheck, FileText, Images, MessageSquare } from "lucide-react";
 import { Button } from "../ui/button";
 import logoName from "../../assets/brand/nome-entregai.svg";
 import logoSymbol from "../../assets/brand/logo-entregai.svg";
@@ -39,6 +39,7 @@ export default function AdminLayout() {
     { name: "Stone/Pagar.me", path: "/settings/pagarme-marketplace", icon: WalletCards, slug: "pagarme_marketplace" },
     { name: "MP Sandbox", path: "/settings/mercadopago-test", icon: WalletCards, slug: "mercadopago_test" },
     { name: "Auditoria", path: "/audit-logs", icon: ClipboardList, slug: "audit_logs" },
+    { name: "Feedbacks", path: "/feedbacks", icon: MessageSquare, slug: "dashboard" },
     { name: "Segurança", path: "/security", icon: ShieldCheck, slug: "dashboard" },
     { name: "Documentos legais", path: "/legal-documents", icon: FileText, slug: "legal_documents" },
     { name: "Saúde do Sistema", path: "/system-health", icon: Activity, slug: "observability" },
