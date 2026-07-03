@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, ChevronLeft, ChevronRight, MessageSquare, RefreshCw, Search, Store, UserRound } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare, RefreshCw, Search, Store, UserRound } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatBrasiliaDate } from "../../lib/dateTime";
 
@@ -44,6 +44,12 @@ const ratingStyle: Record<FeedbackRating, string> = {
   otimo: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
+const getFeedbackGroupKey = (group: CustomerFeedbackGroup) =>
+  group.cliente_id ||
+  group.cliente_email ||
+  group.cliente_telefone ||
+  group.cliente_nome;
+
 export default function CustomerFeedbacks() {
   const [groups, setGroups] = useState<CustomerFeedbackGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +59,7 @@ export default function CustomerFeedbacks() {
   const [ratingFilter, setRatingFilter] = useState("todos");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const fetchFeedbacks = async () => {
     try {
@@ -93,6 +100,13 @@ export default function CustomerFeedbacks() {
   const handleRatingChange = (value: string) => {
     setPage(1);
     setRatingFilter(value);
+  };
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [groupKey]: !current[groupKey],
+    }));
   };
 
   return (
@@ -177,14 +191,25 @@ export default function CustomerFeedbacks() {
             <p className="text-slate-500">Ajuste os filtros ou aguarde novas avaliações dos clientes.</p>
           </div>
         ) : (
-          groups.map((group) => (
-            <section key={group.cliente_id || group.cliente_nome} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          groups.map((group) => {
+            const groupKey = getFeedbackGroupKey(group);
+            const isCollapsed = collapsedGroups[groupKey] === true;
+            const GroupIcon = isCollapsed ? ChevronRight : ChevronDown;
+
+            return (
+            <section key={groupKey} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <UserRound className="h-5 w-5 text-primary" />
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(groupKey)}
+                    className="flex max-w-full items-center gap-2 rounded-md text-left transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    aria-expanded={!isCollapsed}
+                  >
+                    <GroupIcon className="h-4 w-4 shrink-0 text-slate-500" />
+                    <UserRound className="h-5 w-5 shrink-0 text-primary" />
                     <h2 className="truncate text-lg font-semibold text-slate-900">{group.cliente_nome}</h2>
-                  </div>
+                  </button>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
                     <span>{group.cliente_email || "Sem email"}</span>
                     <span>{group.cliente_telefone || "Sem telefone"}</span>
@@ -211,7 +236,8 @@ export default function CustomerFeedbacks() {
                 </div>
               </div>
 
-              <div className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-100">
+              {!isCollapsed && (
+                <div className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-100">
                 {group.feedbacks.map((feedback) => (
                   <div key={feedback.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[130px_1fr_180px] lg:items-center">
                     <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${ratingStyle[feedback.avaliacao]}`}>
@@ -232,9 +258,11 @@ export default function CustomerFeedbacks() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </section>
-          ))
+            );
+          })
         )}
       </div>
 
