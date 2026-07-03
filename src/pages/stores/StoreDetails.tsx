@@ -99,6 +99,11 @@ export default function StoreDetails() {
     moduleMutation.mutate(nextModules);
   };
 
+  const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
+  const receiptPinRequired = storeConfig?.exigir_pin_confirmacao_entrega === true;
+  const cpfInvoiceEnabled = storeConfig?.permitir_cpf_na_nota_cliente === true;
+  const storeConfigUnavailable = !storeConfig?.id;
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
@@ -205,54 +210,6 @@ export default function StoreDetails() {
                 </div>
               </div>
 
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
-                <span>
-                  <span className="block text-sm font-medium">Permitir criação manual de pedidos delivery</span>
-                  <span className="block text-xs text-muted-foreground">Exibe no painel do tenant o fluxo de pedido por telefone/contato.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={storeConfig?.permitir_criacao_pedidos_delivery_admin === true}
-                  disabled={deliveryOrderPreferenceMutation.isPending || !storeConfig?.id}
-                  onChange={(event) => deliveryOrderPreferenceMutation.mutate(event.target.checked)}
-                  className="h-5 w-5 accent-slate-900"
-                />
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
-                <span>
-                  <span className="flex items-center gap-1 text-sm font-medium">
-                    <KeyRound className="h-3.5 w-3.5" /> Exigir PIN na entrega
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    Quando ativo, o PIN e exigido somente em pedidos feitos pelo app do cliente. Pedidos criados pelo admin nao exigem PIN.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={storeConfig?.exigir_pin_confirmacao_entrega !== false}
-                  disabled={receiptPinPreferenceMutation.isPending || !storeConfig?.id}
-                  onChange={(event) => receiptPinPreferenceMutation.mutate(event.target.checked)}
-                  className="h-5 w-5 accent-slate-900"
-                />
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
-                <span>
-                  <span className="block text-sm font-medium">Permitir CPF na nota no checkout</span>
-                  <span className="block text-xs text-muted-foreground">
-                    Configuração do tenant. Só aparece para o admin da loja quando a permissão da plataforma está ativa.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={storeConfig?.permitir_cpf_na_nota_cliente !== false}
-                  disabled={store.permitir_configurar_cpf_na_nota === false || cpfInvoicePreferenceMutation.isPending || !storeConfig?.id}
-                  onChange={(event) => cpfInvoicePreferenceMutation.mutate(event.target.checked)}
-                  className="h-5 w-5 accent-slate-900"
-                />
-              </label>
-
               {store.descricao && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
@@ -313,7 +270,7 @@ export default function StoreDetails() {
               </CardTitle>
               <CardDescription>Horários, taxas e valores</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
@@ -342,6 +299,67 @@ export default function StoreDetails() {
                   <p className="text-lg font-semibold">
                     R$ {Number(store.taxa_entrega_padrao || 0).toFixed(2)}
                   </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 border-t pt-5">
+                <div>
+                  <p className="text-sm font-semibold">Configurações do tenant</p>
+                  <p className="text-xs text-muted-foreground">
+                    Controle permissões operacionais exibidas para o admin da loja.
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="block text-sm font-medium">Permitir criação manual de pedidos delivery</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Exibe no painel do tenant o fluxo de pedido por telefone/contato.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={deliveryOrderCreationEnabled}
+                      disabled={deliveryOrderPreferenceMutation.isPending || storeConfigUnavailable}
+                      onChange={(event) => deliveryOrderPreferenceMutation.mutate(event.target.checked)}
+                      className="h-5 w-5 shrink-0 accent-slate-900"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="flex items-center gap-1 text-sm font-medium">
+                        <KeyRound className="h-3.5 w-3.5" /> Exigir PIN na entrega
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Quando ativo, o PIN é exigido somente em pedidos feitos pelo app do cliente. Pedidos criados pelo admin não exigem PIN.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={receiptPinRequired}
+                      disabled={receiptPinPreferenceMutation.isPending || storeConfigUnavailable}
+                      onChange={(event) => receiptPinPreferenceMutation.mutate(event.target.checked)}
+                      className="h-5 w-5 shrink-0 accent-slate-900"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="block text-sm font-medium">Permitir CPF na nota no checkout</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Configuração do tenant. Só aparece para o admin da loja quando a permissão da plataforma está ativa.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={cpfInvoiceEnabled}
+                      disabled={store.permitir_configurar_cpf_na_nota === false || cpfInvoicePreferenceMutation.isPending || storeConfigUnavailable}
+                      onChange={(event) => cpfInvoicePreferenceMutation.mutate(event.target.checked)}
+                      className="h-5 w-5 shrink-0 accent-slate-900"
+                    />
+                  </label>
                 </div>
               </div>
             </CardContent>
