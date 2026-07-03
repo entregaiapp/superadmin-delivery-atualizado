@@ -5,7 +5,7 @@ import { storeService } from "../../features/stores/storeService";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin } from "lucide-react";
+import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin, KeyRound } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 import AdminsLoja from "./components/AdminsLoja";
@@ -48,6 +48,13 @@ export default function StoreDetails() {
   const cpfInvoicePreferenceMutation = useMutation({
     mutationFn: (enabled: boolean) => storeService.updateCpfInvoicePreference(id!, {
       permitir_cpf_na_nota_cliente: enabled,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
+  });
+
+  const receiptPinPreferenceMutation = useMutation({
+    mutationFn: (enabled: boolean) => storeService.updateReceiptPinPreference(id!, {
+      exigir_pin_confirmacao_entrega: enabled,
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
   });
@@ -208,6 +215,24 @@ export default function StoreDetails() {
                   checked={storeConfig?.permitir_criacao_pedidos_delivery_admin === true}
                   disabled={deliveryOrderPreferenceMutation.isPending || !storeConfig?.id}
                   onChange={(event) => deliveryOrderPreferenceMutation.mutate(event.target.checked)}
+                  className="h-5 w-5 accent-slate-900"
+                />
+              </label>
+
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                <span>
+                  <span className="flex items-center gap-1 text-sm font-medium">
+                    <KeyRound className="h-3.5 w-3.5" /> Exigir PIN na entrega
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    Quando ativo, o PIN e exigido somente em pedidos feitos pelo app do cliente. Pedidos criados pelo admin nao exigem PIN.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={storeConfig?.exigir_pin_confirmacao_entrega !== false}
+                  disabled={receiptPinPreferenceMutation.isPending || !storeConfig?.id}
+                  onChange={(event) => receiptPinPreferenceMutation.mutate(event.target.checked)}
                   className="h-5 w-5 accent-slate-900"
                 />
               </label>

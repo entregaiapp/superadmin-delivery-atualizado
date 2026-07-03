@@ -51,6 +51,10 @@ export interface StoreCpfInvoicePreference {
   permitir_cpf_na_nota_cliente: boolean;
 }
 
+export interface StoreReceiptPinPreference {
+  exigir_pin_confirmacao_entrega: boolean;
+}
+
 export interface DeliveryPaymentBillingReportFilters {
   dataInicio: string;
   dataFim: string;
@@ -270,6 +274,17 @@ export const storeService = {
     const configResponse = await api.get(`/lojas/${storeId}/configuracoes`);
     const config = unwrapApiData<any>(configResponse.data);
     if (!config?.id) throw new Error("A loja não possui configurações para atualizar.");
+    const response = await api.patch(`/configuracoes_loja/${config.id}`, preference);
+    return unwrapApiData(response.data);
+  },
+
+  updateReceiptPinPreference: async (
+    storeId: string,
+    preference: StoreReceiptPinPreference,
+  ) => {
+    const configResponse = await api.get(`/lojas/${storeId}/configuracoes`);
+    const config = unwrapApiData<any>(configResponse.data);
+    if (!config?.id) throw new Error("A loja nao possui configuracoes para atualizar.");
     const response = await api.patch(`/configuracoes_loja/${config.id}`, preference);
     return unwrapApiData(response.data);
   },
