@@ -105,7 +105,7 @@ export default function CustomerFeedbacks() {
   const toggleGroup = (groupKey: string) => {
     setCollapsedGroups((current) => ({
       ...current,
-      [groupKey]: !current[groupKey],
+      [groupKey]: !(current[groupKey] !== false),
     }));
   };
 
@@ -193,7 +193,7 @@ export default function CustomerFeedbacks() {
         ) : (
           groups.map((group) => {
             const groupKey = getFeedbackGroupKey(group);
-            const isCollapsed = collapsedGroups[groupKey] === true;
+            const isCollapsed = collapsedGroups[groupKey] !== false;
             const GroupIcon = isCollapsed ? ChevronRight : ChevronDown;
 
             return (
