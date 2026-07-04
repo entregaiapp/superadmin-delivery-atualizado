@@ -22,11 +22,10 @@ const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaia
 const RESERVED_SUBDOMAINS = new Set(["admin", "app", "api", "www", "dashboard", "login"]);
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Informe uma cor válida");
 const subdomainSchema = z.string()
-  .min(1, "Informe o subdomínio")
-  .refine((value) => value === value.trim(), "Não use espaços no início ou fim")
-  .refine((value) => !/\s/.test(value), "Não use espaços")
-  .refine((value) => /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(value), "Use apenas letras minúsculas, números e hífen")
-  .refine((value) => !RESERVED_SUBDOMAINS.has(value), "Este subdomínio é reservado");
+  .refine((value) => !value || value === value.trim(), "Não use espaços no início ou fim")
+  .refine((value) => !value || !/\s/.test(value), "Não use espaços")
+  .refine((value) => !value || /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(value), "Use apenas letras minúsculas, números e hífen")
+  .refine((value) => !value || !RESERVED_SUBDOMAINS.has(value), "Este subdomínio é reservado");
 
 const storeSchema = z.object({
   nome: z.string().min(3, "O nome da loja é obrigatório (mín. 3 caracteres)"),
@@ -68,6 +67,7 @@ type StoreApiError = {
 };
 
 const OPTIONAL_TEXT_FIELDS = [
+  "subdomain",
   "razao_social",
   "telefone",
   "email",
@@ -256,10 +256,10 @@ export default function StoreForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="subdomain">Subdomínio <span className="text-red-500">*</span></Label>
+                <Label htmlFor="subdomain">Subdomínio</Label>
                 <Input id="subdomain" placeholder="mercadodoleo" {...register("subdomain")} className={errors.subdomain ? "border-red-500" : ""} />
                 <p className="text-xs text-muted-foreground">
-                  {subdomainValue ? `https://${subdomainValue}.${TENANT_ROOT_DOMAIN}` : `https://subdominio.${TENANT_ROOT_DOMAIN}`}
+                  {subdomainValue ? `https://${subdomainValue}.${TENANT_ROOT_DOMAIN}` : "Opcional. Sem subdomínio, a loja usa o link padrão da aplicação."}
                 </p>
                 {errors.subdomain && <span className="text-xs text-red-500">{errors.subdomain.message}</span>}
               </div>
