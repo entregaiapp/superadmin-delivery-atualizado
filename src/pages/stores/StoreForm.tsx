@@ -19,7 +19,7 @@ import { Link } from "react-router-dom";
 const DEFAULT_PRIMARY_COLOR = "#122a4c";
 const DEFAULT_SECONDARY_COLOR = "#16a34a";
 const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
-const RESERVED_SUBDOMAINS = new Set(["admin", "app", "api", "www", "dashboard", "login"]);
+const RESERVED_SUBDOMAINS = new Set(["admin", "app", "api", "www", "dashboard", "login", "cliente"]);
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Informe uma cor válida");
 const subdomainSchema = z.string()
   .refine((value) => !value || value === value.trim(), "Não use espaços no início ou fim")
