@@ -8,6 +8,8 @@ import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Plus, Search, Edit, Eye, Trash2 } from "lucide-react";
 
+const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
+
 export default function StoresList() {
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
@@ -38,6 +40,7 @@ export default function StoresList() {
 
   const filteredStores = stores.filter((store: Store) => 
     store.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    store.subdomain?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     store.cnpj?.includes(searchTerm) ||
     store.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -79,6 +82,7 @@ export default function StoresList() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Subdomínio</TableHead>
               <TableHead>CNPJ</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead>Tipo</TableHead>
@@ -91,19 +95,19 @@ export default function StoresList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Carregando lojas...
                 </TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-red-500">
+                <TableCell colSpan={9} className="text-center py-8 text-red-500">
                   Erro ao carregar lojas.
                 </TableCell>
               </TableRow>
             ) : filteredStores.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhuma loja encontrada.
                 </TableCell>
               </TableRow>
@@ -117,6 +121,9 @@ export default function StoresList() {
                         <span className="block text-xs text-muted-foreground">{store.razao_social}</span>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs">{store.subdomain ? `${store.subdomain}.${TENANT_ROOT_DOMAIN}` : "—"}</span>
                   </TableCell>
                   <TableCell>{store.cnpj}</TableCell>
                   <TableCell>

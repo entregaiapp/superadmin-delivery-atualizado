@@ -2,6 +2,7 @@ import { api } from "../../lib/api";
 
 export interface Store {
   id: string;
+  subdomain?: string | null;
   nome: string;
   razao_social?: string | null;
   cnpj: string;

@@ -18,10 +18,19 @@ import { Link } from "react-router-dom";
 
 const DEFAULT_PRIMARY_COLOR = "#122a4c";
 const DEFAULT_SECONDARY_COLOR = "#16a34a";
+const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
+const RESERVED_SUBDOMAINS = new Set(["admin", "app", "api", "www", "dashboard", "login"]);
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Informe uma cor válida");
+const subdomainSchema = z.string()
+  .min(1, "Informe o subdomínio")
+  .refine((value) => value === value.trim(), "Não use espaços no início ou fim")
+  .refine((value) => !/\s/.test(value), "Não use espaços")
+  .refine((value) => /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(value), "Use apenas letras minúsculas, números e hífen")
+  .refine((value) => !RESERVED_SUBDOMAINS.has(value), "Este subdomínio é reservado");
 
 const storeSchema = z.object({
   nome: z.string().min(3, "O nome da loja é obrigatório (mín. 3 caracteres)"),
+  subdomain: subdomainSchema,
   razao_social: z.string().optional().or(z.literal("")),
   cnpj: z.string().min(14, "CNPJ inválido"),
   telefone: z.string().optional().or(z.literal("")),
@@ -86,6 +95,7 @@ export default function StoreForm() {
     resolver: zodResolver(storeSchema),
     defaultValues: {
       status: "ativa",
+      subdomain: "",
       valor_minimo_pedido: 0,
       taxa_entrega_padrao: 0,
       latitude: null,
@@ -102,6 +112,7 @@ export default function StoreForm() {
   });
   const primaryColorValue = watch("cor_primaria") || DEFAULT_PRIMARY_COLOR;
   const secondaryColorValue = watch("cor_secundaria") || DEFAULT_SECONDARY_COLOR;
+  const subdomainValue = watch("subdomain") || "";
   const establishmentType = watch("tipo_estabelecimento");
   const configurableMenuEnabled = watch("cardapio_configuravel_ativo");
   const cpfInvoiceConfigurationEnabled = watch("permitir_configurar_cpf_na_nota");
@@ -117,6 +128,7 @@ export default function StoreForm() {
     if (store && isEditing) {
       reset({
         nome: store.nome || "",
+        subdomain: store.subdomain || "",
         razao_social: store.razao_social || "",
         cnpj: store.cnpj || "",
         telefone: store.telefone || "",
@@ -241,6 +253,15 @@ export default function StoreForm() {
                 <Label htmlFor="nome">Nome da Loja <span className="text-red-500">*</span></Label>
                 <Input id="nome" placeholder="Ex: Mercado Compre Bem" {...register("nome")} className={errors.nome ? "border-red-500" : ""} />
                 {errors.nome && <span className="text-xs text-red-500">{errors.nome.message}</span>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subdomain">Subdomínio <span className="text-red-500">*</span></Label>
+                <Input id="subdomain" placeholder="mercadodoleo" {...register("subdomain")} className={errors.subdomain ? "border-red-500" : ""} />
+                <p className="text-xs text-muted-foreground">
+                  {subdomainValue ? `https://${subdomainValue}.${TENANT_ROOT_DOMAIN}` : `https://subdominio.${TENANT_ROOT_DOMAIN}`}
+                </p>
+                {errors.subdomain && <span className="text-xs text-red-500">{errors.subdomain.message}</span>}
               </div>
               
               <div className="space-y-2">

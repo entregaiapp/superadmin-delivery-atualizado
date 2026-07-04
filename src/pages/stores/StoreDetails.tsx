@@ -12,6 +12,7 @@ import AdminsLoja from "./components/AdminsLoja";
 import RelatorioPagamentosEntrega from "./components/RelatorioPagamentosEntrega";
 
 type StoreTab = "dados" | "administradores" | "financeiro" | "modulos";
+const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
 
 export default function StoreDetails() {
   const { id } = useParams<{ id: string }>();
@@ -167,6 +168,11 @@ export default function StoreDetails() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Nome da Loja</p>
                 <p className="text-lg font-semibold">{store.nome}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Subdomínio</p>
+                <p className="font-mono text-sm">{store.subdomain ? `${store.subdomain}.${TENANT_ROOT_DOMAIN}` : "Não informado"}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
