@@ -141,6 +141,23 @@ export interface MetricasGerais {
       valor_bruto_transferido: number;
       valor_liquido_transferido: number;
     };
+    splits_apurados?: {
+      resumo: {
+        quantidade_pedidos_total: number;
+        quantidade_pedidos_cobrados: number;
+        valor_bruto_total: number;
+        valor_final_cobranca: number;
+      };
+      categorias: Array<{
+        categoria: string;
+        label: string;
+        quantidade_pedidos: number;
+        quantidade_cobrada: number;
+        valor_bruto: number;
+        valor_cobranca: number;
+      }>;
+      pedidos_recentes: Array<Record<string, unknown>>;
+    };
     webhooks: {
       total_notificacoes: number;
       processadas: number;

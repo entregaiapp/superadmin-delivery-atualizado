@@ -21,6 +21,12 @@ export interface RegraSplit {
   gateway: string;
   ativo: boolean;
   prioridade: number;
+  cobrar_pedidos_app_cliente: boolean;
+  cobrar_admin_delivery_entrega: boolean;
+  cobrar_admin_delivery_retirada: boolean;
+  cobrar_pedidos_salao: boolean;
+  cobrar_fiado_com_taxa_registrada: boolean;
+  cobrar_fiado_sem_taxa_registrada: boolean;
   criado_em?: string;
   destinatarios?: RegraSplitDestinatario[];
 }

@@ -252,6 +252,16 @@ function normalizeDashboard(m: any) {
       },
       estornos: { total_estornos: 0, estornos_aprovados: 0, estornos_pendentes: 0, valor_total_estornado: 0 },
       splits: { total_splits: 0, splits_transferidos: 0, splits_pendentes: 0, splits_falharam: 0, valor_bruto_transferido: 0, valor_liquido_transferido: 0 },
+      splits_apurados: m.financeiro?.splits_apurados || {
+        resumo: {
+          quantidade_pedidos_total: 0,
+          quantidade_pedidos_cobrados: 0,
+          valor_bruto_total: 0,
+          valor_final_cobranca: 0,
+        },
+        categorias: [],
+        pedidos_recentes: [],
+      },
       webhooks: { total_notificacoes: 0, processadas: 0, nao_processadas: 0, com_erro: 0 },
     },
     entregas: { total_entregas: 0, entregas_aguardando: 0, entregas_atribuidas: 0, entregas_em_andamento: 0, entregas_concluidas: 0, entregas_falharam: 0 },
@@ -366,6 +376,17 @@ export default function Dashboard() {
     };
   const canalEntrega = resumoCanal("entrega");
   const canalApp = resumoCanal("app");
+  const splitApurado = fin.splits_apurados || {
+    resumo: {
+      quantidade_pedidos_total: 0,
+      quantidade_pedidos_cobrados: 0,
+      valor_bruto_total: 0,
+      valor_final_cobranca: 0,
+    },
+    categorias: [],
+  };
+  const splitResumo = splitApurado.resumo || {};
+  const splitCategorias = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
 
   return (
     <div className="space-y-6">
@@ -457,7 +478,17 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} stroke="hsl(var(--muted-foreground))" />
                 <YAxis type="category" dataKey="nome" width={140} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip formatter={(v) => fmt(v as number | string | undefined)} />
+                <Tooltip
+                  formatter={(v) => fmt(v as number | string | undefined)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--popover))",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "var(--radius)",
+                    color: "hsl(var(--popover-foreground))",
+                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+                  }}
+                  labelStyle={{ color: "hsl(var(--popover-foreground))" }}
+                />
                 <Bar dataKey="faturamento" fill="#6366f1" radius={[0, 6, 6, 0]} name="Faturamento" />
               </BarChart>
             </ResponsiveContainer>
@@ -507,11 +538,43 @@ export default function Dashboard() {
           sub={`${num(pagamentosEstornados)} pagamento(s) estornado(s)`}
           color="text-amber-500" trend={Number(pagamentosEstornados) > 0 ? "down" : "neutral"}
           help="Soma dos pagamentos cujo status financeiro é estornado. Esses valores não entram em Pagamentos Recebidos, mesmo que tenham data de pagamento registrada." />
-        <StatCard title="Splits Transferidos" value={fmt(fin.splits.valor_liquido_transferido)} icon={ArrowUpRight}
-          sub={`${num(fin.splits.splits_transferidos)} de ${num(fin.splits.total_splits)} · ${num(fin.splits.splits_pendentes)} pendentes`}
+        <StatCard title="Split da Plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
+          sub={`${num(splitResumo.quantidade_pedidos_cobrados)} de ${num(splitResumo.quantidade_pedidos_total)} pedido(s) - ${fmt(splitResumo.valor_bruto_total)} bruto`}
           color="text-indigo-500"
-          help="Valor líquido de splits que já foram transferidos para as contas configuradas. Pendentes ainda aguardam processamento ou confirmação do provedor." />
+          help="Valor apurado pelo sistema com base nos pedidos do periodo e nos checks ativos da regra de split: app do cliente, admin entrega/retirada, salao e fiado com ou sem taxa registrada." />
       </div>
+
+      {splitCategorias.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ArrowUpRight className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+              Detalhamento do Split
+              <MetricHelp text="Quebra do split apurado por categoria de pedido configurada na regra ativa de cada loja." />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {splitCategorias.map((category: any) => (
+                <div key={category.categoria} className="rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{category.label || category.categoria}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {num(category.quantidade_cobrada)} de {num(category.quantidade_pedidos)} pedido(s)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between gap-3">
+                    <p className="text-lg font-bold">{fmt(category.valor_cobranca)}</p>
+                    <p className="text-xs text-muted-foreground">Bruto {fmt(category.valor_bruto)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}

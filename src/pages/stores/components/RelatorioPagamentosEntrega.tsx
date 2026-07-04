@@ -33,14 +33,19 @@ function formatDateTime(value: string) {
   });
 }
 
-function acceptsCashPayment(config: any) {
-  const methods = Array.isArray(config?.formas_pagamento) ? config.formas_pagamento : [];
-  return methods.some((method: unknown) => String(method).trim().toLocaleLowerCase("pt-BR") === "dinheiro");
-}
-
 function csvCell(value: unknown) {
   const normalized = value === null || value === undefined ? "" : String(value);
   return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function originLabel(value: string | undefined | null) {
+  const labels: Record<string, string> = {
+    cliente: "Cliente",
+    manual: "Manual",
+    fiado: "Fiado",
+    salao: "Salao",
+  };
+  return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
 }
 
 function buildCsv(report: DeliveryPaymentBillingReport) {
@@ -53,6 +58,8 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
     ["Resumo"],
     ["Pedidos clientes", report.resumo.quantidade_pedidos_clientes],
     ["Pedidos manuais", report.resumo.quantidade_pedidos_manuais],
+    ["Pedidos fiado", report.resumo.quantidade_pedidos_fiados || 0],
+    ["Pedidos salao", report.resumo.quantidade_pedidos_salao || 0],
     ["Valor bruto total", report.resumo.valor_bruto_total],
     ["Valor final da cobranca", report.resumo.valor_final_cobranca],
     [],
@@ -60,8 +67,11 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
       "Data",
       "Numero",
       "Origem",
+      "Categoria",
       "Status",
       "Pagamento",
+      "Fiado",
+      "Taxa registrada",
       "Total",
       "Valor cobranca",
       "Contabiliza plataforma",
@@ -69,9 +79,12 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
     ...report.pedidos.map((order) => [
       formatDate(order.data),
       order.numero_pedido,
-      order.origem_relatorio,
+      originLabel(order.origem_relatorio),
+      order.categoria_cobranca_label || order.categoria_cobranca || "",
       order.status,
       order.pagamento_entrega_tipo,
+      order.pedido_fiado ? "sim" : "nao",
+      order.aplicado_taxa ? "sim" : "nao",
       order.total,
       order.valor_cobranca,
       order.contabiliza_plataforma ? "sim" : "nao",
@@ -99,7 +112,7 @@ function downloadCsv(report: DeliveryPaymentBillingReport) {
 
 export default function RelatorioPagamentosEntrega({
   lojaId,
-  storeConfig,
+  storeConfig: _storeConfig,
 }: {
   lojaId: string;
   storeConfig: any;
@@ -108,7 +121,6 @@ export default function RelatorioPagamentosEntrega({
   const firstDay = `${today.slice(0, 7)}-01`;
   const [filters, setFilters] = useState({ dataInicio: firstDay, dataFim: today });
 
-  const enabled = acceptsCashPayment(storeConfig);
   const invalidRange = Boolean(filters.dataInicio && filters.dataFim && filters.dataFim < filters.dataInicio);
   const reportMutation = useMutation({
     mutationFn: () => storeService.getDeliveryPaymentBillingReport(lojaId, filters),
@@ -121,8 +133,6 @@ export default function RelatorioPagamentosEntrega({
     if (report.regra_split.tipo_valor === "fixo") return money(report.regra_split.valor);
     return `${report.regra_split.tipo_valor} ${report.regra_split.valor}`;
   }, [report?.regra_split]);
-
-  if (!enabled) return null;
 
   return (
     <Card>
@@ -194,12 +204,25 @@ export default function RelatorioPagamentosEntrega({
 
         {report && (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-5">
               <Summary title="Valor a receber" value={money(report.resumo.valor_final_cobranca)} />
               <Summary title="Pedidos clientes" value={String(report.resumo.quantidade_pedidos_clientes)} />
               <Summary title="Pedidos manuais" value={String(report.resumo.quantidade_pedidos_manuais)} />
+              <Summary title="Pedidos fiado" value={String(report.resumo.quantidade_pedidos_fiados || 0)} />
               <Summary title="Valor bruto" value={money(report.resumo.valor_bruto_total)} />
             </div>
+
+            {Array.isArray(report.categorias) && report.categorias.length > 0 && (
+              <div className="grid gap-3 md:grid-cols-3">
+                {report.categorias.map((category) => (
+                  <Summary
+                    key={category.categoria}
+                    title={category.label}
+                    value={`${money(category.valor_cobranca)} / ${category.quantidade_cobrada} pedido(s)`}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>Regra de split:</span>
@@ -215,6 +238,8 @@ export default function RelatorioPagamentosEntrega({
                     <TableHead>Data</TableHead>
                     <TableHead>Clientes</TableHead>
                     <TableHead>Manuais</TableHead>
+                    <TableHead>Fiados</TableHead>
+                    <TableHead>Salao</TableHead>
                     <TableHead>Valor bruto</TableHead>
                     <TableHead>Valor a receber</TableHead>
                   </TableRow>
@@ -222,7 +247,7 @@ export default function RelatorioPagamentosEntrega({
                 <TableBody>
                   {report.dias.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
                         Nenhum pedido pago na entrega no período.
                       </TableCell>
                     </TableRow>
@@ -231,6 +256,8 @@ export default function RelatorioPagamentosEntrega({
                       <TableCell className="font-medium">{formatDate(day.data)}</TableCell>
                       <TableCell>{day.quantidade_pedidos_clientes}</TableCell>
                       <TableCell>{day.quantidade_pedidos_manuais}</TableCell>
+                      <TableCell>{day.quantidade_pedidos_fiados || 0}</TableCell>
+                      <TableCell>{day.quantidade_pedidos_salao || 0}</TableCell>
                       <TableCell>{money(day.valor_bruto_total)}</TableCell>
                       <TableCell className="font-semibold">{money(day.valor_a_receber)}</TableCell>
                     </TableRow>
@@ -247,7 +274,9 @@ export default function RelatorioPagamentosEntrega({
                     <TableHead>Data</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Origem</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead>Pagamento</TableHead>
+                    <TableHead>Fiado</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Valor a receber</TableHead>
                   </TableRow>
@@ -255,7 +284,7 @@ export default function RelatorioPagamentosEntrega({
                 <TableBody>
                   {report.pedidos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="py-6 text-center text-muted-foreground">
                         Nenhum pedido para detalhar.
                       </TableCell>
                     </TableRow>
@@ -264,8 +293,10 @@ export default function RelatorioPagamentosEntrega({
                       <TableCell className="font-medium">{order.numero_pedido}</TableCell>
                       <TableCell>{formatDateTime(order.realizado_em)}</TableCell>
                       <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
-                      <TableCell>{order.origem_relatorio === "manual" ? "Manual" : "Cliente"}</TableCell>
+                      <TableCell>{originLabel(order.origem_relatorio)}</TableCell>
+                      <TableCell>{order.categoria_cobranca_label || order.categoria_cobranca || "-"}</TableCell>
                       <TableCell className="capitalize">{order.pagamento_entrega_tipo}</TableCell>
+                      <TableCell>{order.pedido_fiado ? "Sim" : "Nao"}</TableCell>
                       <TableCell>{money(order.total)}</TableCell>
                       <TableCell className="font-semibold">{money(order.valor_cobranca)}</TableCell>
                     </TableRow>
