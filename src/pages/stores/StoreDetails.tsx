@@ -369,34 +369,34 @@ export default function StoreDetails() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary" />
-                Endereco da loja
+                Endereço da loja
               </CardTitle>
-              <CardDescription>Usado como endereco de retirada no Mercado Pago.</CardDescription>
+              <CardDescription>Usado como endereço de retirada no Mercado Pago.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
                 <p className="text-sm font-medium text-muted-foreground">Logradouro</p>
-                <p>{store.endereco_rua || "Nao informado"}</p>
+                <p>{store.endereco_rua || "Não informado"}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Numero</p>
-                <p>{store.endereco_numero || "Nao informado"}</p>
+                <p className="text-sm font-medium text-muted-foreground">Número</p>
+                <p>{store.endereco_numero || "Não informado"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Complemento</p>
-                <p>{store.endereco_complemento || "Nao informado"}</p>
+                <p>{store.endereco_complemento || "Não informado"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Bairro</p>
-                <p>{store.endereco_bairro || "Nao informado"}</p>
+                <p>{store.endereco_bairro || "Não informado"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Cidade/UF</p>
-                <p>{store.endereco_cidade && store.endereco_estado ? `${store.endereco_cidade}/${store.endereco_estado}` : "Nao informado"}</p>
+                <p>{store.endereco_cidade && store.endereco_estado ? `${store.endereco_cidade}/${store.endereco_estado}` : "Não informado"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">CEP</p>
-                <p>{store.endereco_cep || "Nao informado"}</p>
+                <p>{store.endereco_cep || "Não informado"}</p>
               </div>
             </CardContent>
           </Card>

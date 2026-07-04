@@ -73,15 +73,15 @@ const healthIcon = (status?: SystemHealthStatus) => {
 };
 
 const formatMs = (value?: number | null) => (
-  typeof value === "number" && Number.isFinite(value) ? `${value.toLocaleString("pt-BR")} ms` : "Indisponivel"
+  typeof value === "number" && Number.isFinite(value) ? `${value.toLocaleString("pt-BR")} ms` : "Indisponível"
 );
 
 const metricsUnavailableLabel = (reason?: string | null) => {
-  if (reason === "missing_cloud_monitoring_config") return "Cloud Monitoring nao configurado.";
-  if (reason === "missing_cloud_monitoring_project_id") return "Projeto GCP nao encontrado.";
-  if (reason === "missing_cloud_run_service_name") return "Servico Cloud Run nao encontrado.";
-  if (reason === "missing_cloud_monitoring_project_and_service") return "Projeto GCP e servico nao encontrados.";
-  if (reason === "cloud_monitoring_unavailable") return "Cloud Monitoring indisponivel.";
+  if (reason === "missing_cloud_monitoring_config") return "Métricas de saúde não configuradas.";
+  if (reason === "missing_cloud_monitoring_project_id") return "Projeto de monitoramento não encontrado.";
+  if (reason === "missing_cloud_run_service_name") return "Serviço de monitoramento não encontrado.";
+  if (reason === "missing_cloud_monitoring_project_and_service") return "Monitoramento incompleto.";
+  if (reason === "cloud_monitoring_unavailable") return "Métricas de saúde indisponíveis.";
   return null;
 };
 

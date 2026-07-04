@@ -16,7 +16,7 @@ export default function RegrasSplitList() {
     : (Array.isArray(regras?.data) ? regras.data : (Array.isArray(regras) ? regras : []));
 
   const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta regra de split?")) {
+    if (confirm("Tem certeza que deseja excluir esta regra de cobrança?")) {
       await regrasSplitService.delete(id);
       refetch();
     }
@@ -31,7 +31,7 @@ export default function RegrasSplitList() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Regras de Split
+            Regras de cobrança
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             Gerencie as taxas e comissões da plataforma (Application Fee).
@@ -59,7 +59,7 @@ export default function RegrasSplitList() {
               {regrasList.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                    Nenhuma regra de split configurada.
+                    Nenhuma regra de cobrança configurada.
                   </td>
                 </tr>
               )}

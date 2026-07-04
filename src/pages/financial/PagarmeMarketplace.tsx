@@ -96,7 +96,7 @@ export default function PagarmeMarketplace() {
       city: form.city,
       state: form.state,
       zip_code: digits(form.zip_code),
-      reference_point: form.reference_point || "Nao informado",
+      reference_point: form.reference_point || "Não informado",
     };
     const phone = { ddd: digits(form.phone_ddd), number: digits(form.phone_number), type: "mobile" };
     const register_information = form.type === "corporation"

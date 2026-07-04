@@ -500,18 +500,18 @@ export default function StoreForm() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="endereco_rua">Endereco da loja</Label>
+                <Label htmlFor="endereco_rua">Endereço da loja</Label>
                 <Input id="endereco_rua" placeholder="Rua, avenida ou logradouro" {...register("endereco_rua")} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="endereco_numero">Numero</Label>
+                <Label htmlFor="endereco_numero">Número</Label>
                 <Input id="endereco_numero" placeholder="123" {...register("endereco_numero")} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="endereco_complemento">Complemento</Label>
-                <Input id="endereco_complemento" placeholder="Sala, loja, ponto de referencia" {...register("endereco_complemento")} />
+                <Input id="endereco_complemento" placeholder="Sala, loja, ponto de referência" {...register("endereco_complemento")} />
               </div>
 
               <div className="space-y-2">

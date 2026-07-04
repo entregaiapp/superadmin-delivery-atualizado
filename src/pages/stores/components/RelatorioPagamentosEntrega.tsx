@@ -43,29 +43,29 @@ function originLabel(value: string | undefined | null) {
     cliente: "Cliente",
     manual: "Manual",
     fiado: "Fiado",
-    salao: "Salao",
+    salao: "Salão",
   };
   return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
 }
 
 function buildCsv(report: DeliveryPaymentBillingReport) {
   const rows = [
-    ["Relatorio", "Pagamentos na entrega"],
+    ["Relatório", "Pagamentos na entrega"],
     ["Loja", report.loja.nome],
-    ["Periodo", `${formatDate(report.periodo.data_inicio)} a ${formatDate(report.periodo.data_fim)}`],
-    ["Regra de split", report.regra_split ? `${report.regra_split.tipo_valor} ${report.regra_split.valor}` : "Sem regra ativa"],
+    ["Período", `${formatDate(report.periodo.data_inicio)} a ${formatDate(report.periodo.data_fim)}`],
+    ["Regra de cobrança", report.regra_split ? `${report.regra_split.tipo_valor} ${report.regra_split.valor}` : "Sem regra ativa"],
     [],
     ["Resumo"],
     ["Pedidos clientes", report.resumo.quantidade_pedidos_clientes],
     ["Pedidos manuais", report.resumo.quantidade_pedidos_manuais],
     ["Pedidos fiado", report.resumo.quantidade_pedidos_fiados || 0],
-    ["Pedidos salao", report.resumo.quantidade_pedidos_salao || 0],
+    ["Pedidos salão", report.resumo.quantidade_pedidos_salao || 0],
     ["Valor bruto total", report.resumo.valor_bruto_total],
-    ["Valor final da cobranca", report.resumo.valor_final_cobranca],
+    ["Valor final da cobrança", report.resumo.valor_final_cobranca],
     [],
     [
       "Data",
-      "Numero",
+      "Número",
       "Origem",
       "Categoria",
       "Status",
@@ -73,7 +73,7 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
       "Fiado",
       "Taxa registrada",
       "Total",
-      "Valor cobranca",
+      "Valor cobrança",
       "Contabiliza plataforma",
     ],
     ...report.pedidos.map((order) => [
@@ -83,14 +83,14 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
       order.categoria_cobranca_label || order.categoria_cobranca || "",
       order.status,
       order.pagamento_entrega_tipo,
-      order.pedido_fiado ? "sim" : "nao",
-      order.aplicado_taxa ? "sim" : "nao",
+      order.pedido_fiado ? "sim" : "não",
+      order.aplicado_taxa ? "sim" : "não",
       order.total,
       order.valor_cobranca,
-      order.contabiliza_plataforma ? "sim" : "nao",
+      order.contabiliza_plataforma ? "sim" : "não",
     ]),
     [],
-    ["Valor final da cobranca", report.resumo.valor_final_cobranca],
+    ["Valor final da cobrança", report.resumo.valor_final_cobranca],
   ];
 
   return rows.map((row) => row.map(csvCell).join(",")).join("\n");
@@ -225,7 +225,7 @@ export default function RelatorioPagamentosEntrega({
             )}
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span>Regra de split:</span>
+              <span>Regra de cobrança:</span>
               <Badge variant={report.regra_split ? "outline" : "secondary"}>{splitLabel}</Badge>
               <span>Período: {formatDate(report.periodo.data_inicio)} a {formatDate(report.periodo.data_fim)}</span>
               {report.gerado_em && <span>Salvo em: {formatDateTime(report.gerado_em)}</span>}
@@ -296,7 +296,7 @@ export default function RelatorioPagamentosEntrega({
                       <TableCell>{originLabel(order.origem_relatorio)}</TableCell>
                       <TableCell>{order.categoria_cobranca_label || order.categoria_cobranca || "-"}</TableCell>
                       <TableCell className="capitalize">{order.pagamento_entrega_tipo}</TableCell>
-                      <TableCell>{order.pedido_fiado ? "Sim" : "Nao"}</TableCell>
+                      <TableCell>{order.pedido_fiado ? "Sim" : "Não"}</TableCell>
                       <TableCell>{money(order.total)}</TableCell>
                       <TableCell className="font-semibold">{money(order.valor_cobranca)}</TableCell>
                     </TableRow>

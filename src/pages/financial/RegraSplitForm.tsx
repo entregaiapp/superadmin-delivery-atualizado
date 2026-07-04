@@ -29,8 +29,8 @@ const SPLIT_SCOPE_OPTIONS = [
   },
   {
     field: "cobrar_pedidos_salao",
-    title: "Pedidos de salao",
-    description: "Pedidos do salao, QR mesa e garcom.",
+    title: "Pedidos de salão",
+    description: "Pedidos do salão, QR da mesa e garçom.",
   },
   {
     field: "cobrar_fiado_sem_taxa_registrada",
@@ -91,8 +91,8 @@ export default function RegraSplitForm() {
       }
       navigate("/settings/split-rules");
     } catch (error) {
-      console.error("Failed to save split rule", error);
-      alert("Erro ao salvar regra de split. Verifique os dados e tente novamente.");
+      console.error("Não foi possível salvar a regra de cobrança", error);
+      alert("Não foi possível salvar a regra de cobrança. Verifique os dados e tente novamente.");
     }
   };
 
@@ -136,7 +136,7 @@ export default function RegraSplitForm() {
         </Button>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {isEditing ? "Editar Regra de Split" : "Nova Regra de Split"}
+            {isEditing ? "Editar regra de cobrança" : "Nova regra de cobrança"}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             Configure as regras de comissionamento e taxas da plataforma.
@@ -233,7 +233,7 @@ export default function RegraSplitForm() {
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 space-y-6">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
             <h3 className="text-lg font-medium text-slate-900 dark:text-white">
-              Pedidos que entram no split
+              Pedidos que entram na cobrança
             </h3>
           </div>
 

@@ -409,7 +409,7 @@ export default function CategoriasList() {
       <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input placeholder="Buscar categoria, slug ou caminho..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" />
+          <Input placeholder="Buscar categoria, identificação ou caminho..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" />
         </div>
       </div>
 
@@ -589,7 +589,7 @@ function CategoriaFormModal({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="slug">Slug</Label>
+        <Label htmlFor="slug">Identificação</Label>
         <Input id="slug" value={slug} onChange={(event) => setSlug(buildSlug(event.target.value))} placeholder="ex: laticinios" required />
       </div>
 

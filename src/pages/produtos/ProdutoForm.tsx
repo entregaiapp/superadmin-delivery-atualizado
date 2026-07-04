@@ -16,7 +16,7 @@ import { Label } from "../../components/ui/label";
 
 const produtoSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  slug: z.string().min(2, "Slug deve ter pelo menos 2 caracteres"),
+  slug: z.string().min(2, "A identificação deve ter pelo menos 2 caracteres"),
   categoria_id: z.string().uuid("Selecione uma categoria"),
   descricao: z.string().optional(),
   marca: z.string().optional(),
@@ -221,7 +221,7 @@ export default function ProdutoForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
+                <Label htmlFor="slug">Identificação</Label>
                 <Input id="slug" {...register("slug")} placeholder="arroz-branco-5kg" />
                 {errors.slug && <p className="text-sm text-red-500">{errors.slug.message}</p>}
               </div>

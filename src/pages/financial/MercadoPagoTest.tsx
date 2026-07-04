@@ -83,10 +83,10 @@ function ThreeDsChallengeModal({
           <div>
             <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
               <Lock className="h-5 w-5 text-emerald-600" />
-              Desafio 3DS
+              Confirmar compra
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Complete a validacao no iframe. Depois consulte o status para confirmar o resultado final.
+              Conclua a confirmação no banco. Depois consulte o resultado final.
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fechar desafio 3DS">
@@ -235,7 +235,7 @@ export const MercadoPagoTest = () => {
     const docNumber = identification.number || order.doc_number;
 
     if (!formData?.token || !formData?.payment_method_id || !payerEmail || !docNumber) {
-      setError("O Brick nao retornou todos os dados necessarios do cartao e do pagador.");
+      setError("Não foi possível validar os dados do cartão e do pagador.");
       return;
     }
 
@@ -288,10 +288,10 @@ export const MercadoPagoTest = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-            Mercado Pago Sandbox
+            Pagamentos de teste do Mercado Pago
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Ambiente isolado para validar pedidos e pagamentos de teste por cartao.
+            Ambiente de teste para validar pedidos e pagamentos por cartão.
           </p>
         </div>
         <Button variant="outline" onClick={loadConfig} disabled={loadingConfig}>
@@ -366,7 +366,7 @@ export const MercadoPagoTest = () => {
                   className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="production">Producao - MP_ACCESS_TOKEN</option>
-                  <option value="sandbox">Sandbox - MP_TEST_ACCESS_TOKEN</option>
+                  <option value="sandbox">Ambiente de teste</option>
                 </select>
               </div>
               <div className="grid gap-2">
@@ -433,7 +433,7 @@ export const MercadoPagoTest = () => {
                               <p className="truncate font-medium text-slate-900">
                                 {[customer.first_name, customer.last_name].filter(Boolean).join(" ") || customer.email || "Cliente sem nome"}
                               </p>
-                              <p className="truncate text-xs text-slate-500">{customer.email || "E-mail nao informado"}</p>
+                              <p className="truncate text-xs text-slate-500">{customer.email || "E-mail não informado"}</p>
                             </div>
                             <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-600">
                               {customer.id || "-"}
@@ -500,7 +500,7 @@ export const MercadoPagoTest = () => {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="description">Descricao</Label>
+                <Label htmlFor="description">Descrição</Label>
                 <Input
                   id="description"
                   value={orderForm.description}
@@ -577,13 +577,13 @@ export const MercadoPagoTest = () => {
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <CreditCard className="h-4 w-4" />
-                Card Payment Brick
+                Dados do cartão
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!isConfigured && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  Configure MP_TEST_ACCESS_TOKEN e MP_TEST_PUBLIC_KEY no backend para habilitar o Brick.
+                  Configure as chaves de teste do Mercado Pago para habilitar o pagamento com cartão.
                 </div>
               )}
 

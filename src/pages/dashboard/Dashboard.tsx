@@ -46,8 +46,8 @@ function labelMetodoPagamento(value: string | undefined | null) {
     dinheiro: "Dinheiro",
     cartao: "Cartão",
     pix: "PIX",
-    cartao_credito: "Cartão crédito",
-    cartao_debito: "Cartão débito",
+    cartao_credito: "Cartão de crédito",
+    cartao_debito: "Cartão de débito",
     outros: "Outros",
   };
   return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
@@ -532,16 +532,16 @@ export default function Dashboard() {
           sub={`${num(pagamentosRecebidos)} de ${num(totalPagamentosDetalhados)} pagamento(s)`} color="text-emerald-500" trend="up"
           help="Soma apenas dos pagamentos classificados como recebidos: status aprovado ou pagamento com data de recebimento, sem contar cancelados, rejeitados, expirados ou estornados." />
         <StatCard title="Valor Líquido Recebido" value={fmt(valorLiquidoRecebido)} icon={DollarSign}
-          sub={`Taxas do gateway recebidas: ${fmt(taxasGatewayRecebidas)}`} color="text-green-500"
-          help="Valor recebido descontando as taxas de gateway registradas nos próprios pagamentos recebidos. Pagamentos na entrega normalmente não têm taxa de gateway." />
+          sub={`Taxas de pagamento online: ${fmt(taxasGatewayRecebidas)}`} color="text-green-500"
+          help="Valor recebido já com as taxas dos pagamentos online descontadas. Pagamentos feitos na entrega normalmente não têm essa taxa." />
         <StatCard title="Pagamentos Estornados" value={fmt(valorEstornado)} icon={RefreshCw}
           sub={`${num(pagamentosEstornados)} pagamento(s) estornado(s)`}
           color="text-amber-500" trend={Number(pagamentosEstornados) > 0 ? "down" : "neutral"}
           help="Soma dos pagamentos cujo status financeiro é estornado. Esses valores não entram em Pagamentos Recebidos, mesmo que tenham data de pagamento registrada." />
-        <StatCard title="Split da Plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
+        <StatCard title="Cobrança da plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
           sub={`${num(splitResumo.quantidade_pedidos_cobrados)} de ${num(splitResumo.quantidade_pedidos_total)} pedido(s) - ${fmt(splitResumo.valor_bruto_total)} bruto`}
           color="text-indigo-500"
-          help="Valor apurado pelo sistema com base nos pedidos do periodo e nos checks ativos da regra de split: app do cliente, admin entrega/retirada, salao e fiado com ou sem taxa registrada." />
+          help="Valor calculado com base nos pedidos do período e nas regras de cobrança da plataforma." />
       </div>
 
       {splitCategorias.length > 0 && (
@@ -549,8 +549,8 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <ArrowUpRight className="h-4 w-4 text-indigo-500" aria-hidden="true" />
-              Detalhamento do Split
-              <MetricHelp text="Quebra do split apurado por categoria de pedido configurada na regra ativa de cada loja." />
+              Detalhamento da cobrança
+              <MetricHelp text="Resumo da cobrança da plataforma por tipo de pedido configurado em cada loja." />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -588,11 +588,11 @@ export default function Dashboard() {
         <StatCard title="Recebido na Entrega" value={fmt(canalEntrega.valor_recebido)} icon={Truck}
           sub={`${num(canalEntrega.recebidos)} recebido(s) · ${fmt(canalEntrega.valor_total)} registrado(s)`}
           color="text-cyan-500"
-          help="Parte recebida dos pagamentos marcados para cobrança presencial na entrega, como dinheiro ou cartão sem gateway. O valor registrado no subtítulo inclui todos os status desse canal." />
+          help="Parte recebida dos pagamentos marcados para cobrança presencial na entrega, como dinheiro ou cartão pago na entrega. O valor registrado no subtítulo inclui todos os status desse canal." />
         <StatCard title="Recebido no App" value={fmt(canalApp.valor_recebido)} icon={CreditCard}
           sub={`${num(canalApp.recebidos)} recebido(s) · ${fmt(canalApp.valor_total)} registrado(s)`}
           color="text-violet-500"
-          help="Parte recebida dos pagamentos processados pelo checkout do app, como PIX ou cartão via gateway. O valor registrado no subtítulo inclui aprovados, pendentes, rejeitados, cancelados, expirados e estornados." />
+          help="Parte recebida dos pagamentos feitos no app, como PIX ou cartão online. O valor registrado no subtítulo inclui aprovados, pendentes, rejeitados, cancelados, expirados e estornados." />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -647,7 +647,7 @@ export default function Dashboard() {
                       <p className="text-lg font-bold">{fmt(item.valor_total)}</p>
                       <p className="text-xs text-muted-foreground">Líquido {fmt(item.valor_liquido)}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">Taxas {fmt(item.taxas_gateway)}</p>
+                    <p className="text-xs text-muted-foreground">Taxas de pagamento online {fmt(item.taxas_gateway)}</p>
                   </div>
                 </div>
               ))}
