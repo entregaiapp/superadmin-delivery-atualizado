@@ -1,23 +1,28 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { storeService } from "../../features/stores/storeService";
-import { api } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin, KeyRound } from "lucide-react";
+import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin, KeyRound, Palette, CalendarDays } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 import AdminsLoja from "./components/AdminsLoja";
 import RelatorioPagamentosEntrega from "./components/RelatorioPagamentosEntrega";
+import { formatBrasiliaDate } from "../../lib/dateTime";
 
-type StoreTab = "dados" | "administradores" | "financeiro" | "modulos";
+type StoreTab = "dados" | "usuarios" | "financeiro" | "modulos";
+type StoreModuleView = {
+  slug: string;
+  nome?: string;
+  descricao?: string;
+  enabled?: boolean;
+};
 const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
 
 export default function StoreDetails() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<StoreTab>("dados");
-  const queryClient = useQueryClient();
 
   const { data: store, isLoading, error } = useQuery({
     queryKey: ["store", id],
@@ -32,38 +37,8 @@ export default function StoreDetails() {
 
   const { data: storeConfig } = useQuery({
     queryKey: ["store-config", id],
-    queryFn: async () => {
-      const response = await api.get(`/lojas/${id}/configuracoes`);
-      return response.data?.data ?? response.data;
-    },
+    queryFn: () => storeService.getConfiguration(id!),
     enabled: Boolean(id),
-  });
-
-  const deliveryOrderPreferenceMutation = useMutation({
-    mutationFn: (enabled: boolean) => storeService.updateDeliveryOrderCreationPreference(id!, {
-      permitir_criacao_pedidos_delivery_admin: enabled,
-    }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
-  });
-
-  const cpfInvoicePreferenceMutation = useMutation({
-    mutationFn: (enabled: boolean) => storeService.updateCpfInvoicePreference(id!, {
-      permitir_cpf_na_nota_cliente: enabled,
-    }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
-  });
-
-  const receiptPinPreferenceMutation = useMutation({
-    mutationFn: (enabled: boolean) => storeService.updateReceiptPinPreference(id!, {
-      exigir_pin_confirmacao_entrega: enabled,
-    }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config", id] }),
-  });
-
-  const moduleMutation = useMutation({
-    mutationFn: (nextModules: Array<{ slug: string; enabled: boolean; config?: Record<string, unknown> }>) =>
-      storeService.updateModules(id!, nextModules),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-modules", id] }),
   });
 
   if (isLoading) {
@@ -84,26 +59,30 @@ export default function StoreDetails() {
 
   const tabs: Array<{ id: StoreTab; label: string; icon: typeof Store }> = [
     { id: "dados", label: "Dados da loja", icon: Store },
-    { id: "administradores", label: "Administradores", icon: Users },
+    { id: "usuarios", label: "Usuários", icon: Users },
     { id: "financeiro", label: "Financeiro", icon: WalletCards },
     { id: "modulos", label: "Módulos", icon: Puzzle },
   ];
 
-  const toggleModule = (slug: string, enabled: boolean) => {
-    const currentModules = Array.isArray(modules) ? modules : [];
-    const nextModules = currentModules.map((module: any) => ({
-      slug: module.slug,
-      enabled: module.slug === slug ? enabled : Boolean(module.enabled),
-      config: module.config || {},
-    }));
-
-    moduleMutation.mutate(nextModules);
-  };
-
   const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
   const receiptPinRequired = storeConfig?.exigir_pin_confirmacao_entrega === true;
   const cpfInvoiceEnabled = storeConfig?.permitir_cpf_na_nota_cliente === true;
-  const storeConfigUnavailable = !storeConfig?.id;
+  const moduleList: StoreModuleView[] = Array.isArray(modules) ? modules : [];
+  const formatDate = (value?: string | null) => {
+    if (!value) return "Não informado";
+    return formatBrasiliaDate(value, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+  const preferenceBadge = (enabled: boolean, enabledText = "Ativo", disabledText = "Inativo") => (
+    <Badge variant={enabled ? "success" : "secondary"}>
+      {enabled ? enabledText : disabledText}
+    </Badge>
+  );
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -315,28 +294,22 @@ export default function StoreDetails() {
                 <div>
                   <p className="text-sm font-semibold">Configurações do tenant</p>
                   <p className="text-xs text-muted-foreground">
-                    Controle permissões operacionais exibidas para o admin da loja.
+                    Permissões operacionais exibidas para o admin da loja.
                   </p>
                 </div>
 
                 <div className="grid gap-3">
-                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
                     <span>
                       <span className="block text-sm font-medium">Permitir criação manual de pedidos delivery</span>
                       <span className="block text-xs text-muted-foreground">
                         Exibe no painel do tenant o fluxo de pedido por telefone/contato.
                       </span>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={deliveryOrderCreationEnabled}
-                      disabled={deliveryOrderPreferenceMutation.isPending || storeConfigUnavailable}
-                      onChange={(event) => deliveryOrderPreferenceMutation.mutate(event.target.checked)}
-                      className="h-5 w-5 shrink-0 accent-slate-900"
-                    />
-                  </label>
+                    {preferenceBadge(deliveryOrderCreationEnabled, "Permitido", "Bloqueado")}
+                  </div>
 
-                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
                     <span>
                       <span className="flex items-center gap-1 text-sm font-medium">
                         <KeyRound className="h-3.5 w-3.5" /> Exigir PIN na entrega
@@ -345,30 +318,18 @@ export default function StoreDetails() {
                         Quando ativo, o PIN é exigido somente em pedidos feitos pelo app do cliente. Pedidos criados pelo admin não exigem PIN.
                       </span>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={receiptPinRequired}
-                      disabled={receiptPinPreferenceMutation.isPending || storeConfigUnavailable}
-                      onChange={(event) => receiptPinPreferenceMutation.mutate(event.target.checked)}
-                      className="h-5 w-5 shrink-0 accent-slate-900"
-                    />
-                  </label>
+                    {preferenceBadge(receiptPinRequired, "Exigido", "Não exigido")}
+                  </div>
 
-                  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
                     <span>
                       <span className="block text-sm font-medium">Permitir CPF na nota no checkout</span>
                       <span className="block text-xs text-muted-foreground">
                         Configuração do tenant. Só aparece para o admin da loja quando a permissão da plataforma está ativa.
                       </span>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={cpfInvoiceEnabled}
-                      disabled={store.permitir_configurar_cpf_na_nota === false || cpfInvoicePreferenceMutation.isPending || storeConfigUnavailable}
-                      onChange={(event) => cpfInvoicePreferenceMutation.mutate(event.target.checked)}
-                      className="h-5 w-5 shrink-0 accent-slate-900"
-                    />
-                  </label>
+                    {preferenceBadge(cpfInvoiceEnabled, "Permitido", "Bloqueado")}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -409,17 +370,73 @@ export default function StoreDetails() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="w-5 h-5 text-primary" />
+                Identidade visual
+              </CardTitle>
+              <CardDescription>Cores usadas no app do cliente.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Cor primária</p>
+                  <p className="font-mono text-sm">{store.cor_primaria || "Não informado"}</p>
+                </div>
+                <span className="h-9 w-9 rounded-md border" style={{ backgroundColor: store.cor_primaria || "transparent" }} />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Cor secundária</p>
+                  <p className="font-mono text-sm">{store.cor_secundaria || "Não informado"}</p>
+                </div>
+                <span className="h-9 w-9 rounded-md border" style={{ backgroundColor: store.cor_secundaria || "transparent" }} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-primary" />
+                Cadastro
+              </CardTitle>
+              <CardDescription>Datas e coordenadas registradas.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Criado em</p>
+                <p>{formatDate(store.criado_em)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Atualizado em</p>
+                <p>{formatDate(store.atualizado_em)}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Latitude</p>
+                  <p>{store.latitude ?? "Não informado"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Longitude</p>
+                  <p>{store.longitude ?? "Não informado"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {activeTab === "administradores" && (
+      {activeTab === "usuarios" && (
         <AdminsLoja lojaId={store.id} lojaNome={store.nome} />
       )}
 
       {activeTab === "financeiro" && (
         <div className="space-y-6">
-          <RelatorioPagamentosEntrega lojaId={store.id} storeConfig={storeConfig} />
-          <ContasFinanceirasLoja lojaId={store.id} />
+          <RelatorioPagamentosEntrega lojaId={store.id} />
+          <ContasFinanceirasLoja lojaId={store.id} readOnly />
         </div>
       )}
 
@@ -431,27 +448,22 @@ export default function StoreDetails() {
               Módulos habilitados
             </CardTitle>
             <CardDescription>
-              Controle quais operações ficam disponíveis para este estabelecimento.
+              Operações disponíveis para este estabelecimento.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(Array.isArray(modules) ? modules : []).map((module: any) => (
-              <label
-                key={module.slug}
-                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-4"
-              >
+            {moduleList.length === 0 ? (
+              <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                Nenhum módulo retornado para esta loja.
+              </div>
+            ) : moduleList.map((module) => (
+              <div key={module.slug} className="flex items-center justify-between gap-4 rounded-lg border p-4">
                 <span>
                   <span className="block text-sm font-semibold">{module.nome}</span>
                   <span className="block text-xs text-muted-foreground">{module.descricao || module.slug}</span>
                 </span>
-                <input
-                  type="checkbox"
-                  checked={Boolean(module.enabled)}
-                  disabled={moduleMutation.isPending}
-                  onChange={(event) => toggleModule(module.slug, event.target.checked)}
-                  className="h-5 w-5 accent-slate-900"
-                />
-              </label>
+                {preferenceBadge(Boolean(module.enabled), "Habilitado", "Desabilitado")}
+              </div>
             ))}
           </CardContent>
         </Card>

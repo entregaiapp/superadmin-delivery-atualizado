@@ -13,8 +13,9 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, Save, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, KeyRound, Puzzle, Save, UtensilsCrossed, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
+import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 
 const DEFAULT_PRIMARY_COLOR = "#122a4c";
 const DEFAULT_SECONDARY_COLOR = "#16a34a";
@@ -59,9 +60,19 @@ const storeSchema = z.object({
   exibir_avaliacao_experiencia_compra: z.boolean(),
   visivel_no_app_cliente: z.boolean(),
   preco_app_taxa_ativa: z.boolean(),
+  permitir_criacao_pedidos_delivery_admin: z.boolean(),
+  permitir_cpf_na_nota_cliente: z.boolean(),
+  exigir_pin_confirmacao_entrega: z.boolean(),
 });
 
 type StoreFormValues = z.infer<typeof storeSchema>;
+type StoreModuleSetting = {
+  slug: string;
+  nome?: string;
+  descricao?: string;
+  enabled: boolean;
+  config?: Record<string, unknown>;
+};
 type StoreApiError = {
   error?: string | { message?: string };
   message?: string;
@@ -110,8 +121,12 @@ export default function StoreForm() {
       exibir_avaliacao_experiencia_compra: true,
       visivel_no_app_cliente: true,
       preco_app_taxa_ativa: false,
+      permitir_criacao_pedidos_delivery_admin: false,
+      permitir_cpf_na_nota_cliente: false,
+      exigir_pin_confirmacao_entrega: false,
     }
   });
+  const [moduleSettings, setModuleSettings] = useState<StoreModuleSetting[]>([]);
   const primaryColorValue = watch("cor_primaria") || DEFAULT_PRIMARY_COLOR;
   const secondaryColorValue = watch("cor_secundaria") || DEFAULT_SECONDARY_COLOR;
   const subdomainValue = watch("subdomain") || "";
@@ -120,10 +135,25 @@ export default function StoreForm() {
   const configurableMenuEnabled = watch("cardapio_configuravel_ativo");
   const cpfInvoiceConfigurationEnabled = watch("permitir_configurar_cpf_na_nota");
   const orderExperienceFeedbackEnabled = watch("exibir_avaliacao_experiencia_compra");
+  const deliveryOrderCreationEnabled = watch("permitir_criacao_pedidos_delivery_admin");
+  const receiptPinRequired = watch("exigir_pin_confirmacao_entrega");
+  const cpfInvoiceEnabled = watch("permitir_cpf_na_nota_cliente");
 
   const { data: store, isLoading } = useQuery({
     queryKey: ["store", id],
     queryFn: () => storeService.getById(id!),
+    enabled: isEditing,
+  });
+
+  const { data: storeConfig } = useQuery({
+    queryKey: ["store-config", id],
+    queryFn: () => storeService.getConfiguration(id!),
+    enabled: isEditing,
+  });
+
+  const { data: modules = [] } = useQuery({
+    queryKey: ["store-modules", id],
+    queryFn: () => storeService.getModules(id!),
     enabled: isEditing,
   });
 
@@ -161,22 +191,50 @@ export default function StoreForm() {
         exibir_avaliacao_experiencia_compra: store.exibir_avaliacao_experiencia_compra !== false,
         visivel_no_app_cliente: store.visivel_no_app_cliente !== false,
         preco_app_taxa_ativa: Boolean(store.preco_app_taxa_ativa),
+        permitir_criacao_pedidos_delivery_admin: storeConfig?.permitir_criacao_pedidos_delivery_admin === true,
+        permitir_cpf_na_nota_cliente: storeConfig?.permitir_cpf_na_nota_cliente === true,
+        exigir_pin_confirmacao_entrega: storeConfig?.exigir_pin_confirmacao_entrega === true,
       });
     }
-  }, [store, reset, isEditing]);
+  }, [store, storeConfig, reset, isEditing]);
+
+  useEffect(() => {
+    if (storeConfig && isEditing) {
+      setValue("permitir_criacao_pedidos_delivery_admin", storeConfig.permitir_criacao_pedidos_delivery_admin === true);
+      setValue("permitir_cpf_na_nota_cliente", storeConfig.permitir_cpf_na_nota_cliente === true);
+      setValue("exigir_pin_confirmacao_entrega", storeConfig.exigir_pin_confirmacao_entrega === true);
+    }
+  }, [storeConfig, setValue, isEditing]);
+
+  useEffect(() => {
+    const normalizedModules: StoreModuleSetting[] = Array.isArray(modules) ? modules : [];
+    setModuleSettings(normalizedModules.map((module) => ({
+      slug: module.slug,
+      nome: module.nome,
+      descricao: module.descricao,
+      enabled: Boolean(module.enabled),
+      config: module.config || {},
+    })));
+  }, [modules]);
 
   const mutation = useMutation({
     mutationFn: async (data: StoreFormValues) => {
+      const {
+        permitir_criacao_pedidos_delivery_admin,
+        permitir_cpf_na_nota_cliente,
+        exigir_pin_confirmacao_entrega,
+        ...storeData
+      } = data;
       // Limpa campos vazios para enviar null ao backend
       const payload: StoreCreatePayload = {
-        ...data,
-        tipo_estabelecimento: data.tipo_estabelecimento,
-        cache_cardapio_ativo: data.cache_cardapio_ativo === true,
-        cardapio_configuravel_ativo: data.cardapio_configuravel_ativo === true,
-        permitir_configurar_cpf_na_nota: data.permitir_configurar_cpf_na_nota === true,
-        exibir_avaliacao_experiencia_compra: data.exibir_avaliacao_experiencia_compra === true,
-        visivel_no_app_cliente: data.visivel_no_app_cliente === true,
-        preco_app_taxa_ativa: data.preco_app_taxa_ativa === true,
+        ...storeData,
+        tipo_estabelecimento: storeData.tipo_estabelecimento,
+        cache_cardapio_ativo: storeData.cache_cardapio_ativo === true,
+        cardapio_configuravel_ativo: storeData.cardapio_configuravel_ativo === true,
+        permitir_configurar_cpf_na_nota: storeData.permitir_configurar_cpf_na_nota === true,
+        exibir_avaliacao_experiencia_compra: storeData.exibir_avaliacao_experiencia_compra === true,
+        visivel_no_app_cliente: storeData.visivel_no_app_cliente === true,
+        preco_app_taxa_ativa: storeData.preco_app_taxa_ativa === true,
       };
 
       for (const field of OPTIONAL_TEXT_FIELDS) {
@@ -186,7 +244,30 @@ export default function StoreForm() {
       }
 
       if (isEditing) {
-        return storeService.update(id, payload);
+        const updatedStore = await storeService.update(id!, payload);
+        const followUpUpdates: Array<Promise<unknown>> = [];
+
+        if (storeConfig?.id) {
+          followUpUpdates.push(storeService.updateStoreConfiguration(id!, {
+            permitir_criacao_pedidos_delivery_admin,
+            permitir_cpf_na_nota_cliente,
+            exigir_pin_confirmacao_entrega,
+          }));
+        }
+
+        if (moduleSettings.length > 0) {
+          followUpUpdates.push(storeService.updateModules(id!, moduleSettings.map((module) => ({
+            slug: module.slug,
+            enabled: module.enabled,
+            config: module.config || {},
+          }))));
+        }
+
+        if (followUpUpdates.length > 0) {
+          await Promise.all(followUpUpdates);
+        }
+
+        return updatedStore;
       }
 
       return storeService.create(payload);
@@ -195,6 +276,8 @@ export default function StoreForm() {
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       if (id) {
         queryClient.invalidateQueries({ queryKey: ["store", id] });
+        queryClient.invalidateQueries({ queryKey: ["store-config", id] });
+        queryClient.invalidateQueries({ queryKey: ["store-modules", id] });
       }
       navigate("/stores");
     },
@@ -213,6 +296,12 @@ export default function StoreForm() {
   const onSubmit: SubmitHandler<StoreFormValues> = (data) => {
     setError("");
     mutation.mutate(data);
+  };
+
+  const toggleModuleSetting = (slug: string, enabled: boolean) => {
+    setModuleSettings((current) => current.map((module) => (
+      module.slug === slug ? { ...module, enabled } : module
+    )));
   };
 
   if (isEditing && isLoading) {
@@ -461,6 +550,123 @@ export default function StoreForm() {
           </CardContent>
         </Card>
 
+        {isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-primary" />
+                Configurações do tenant
+              </CardTitle>
+              <CardDescription>
+                Permissões operacionais disponíveis no painel administrativo desta loja.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label
+                htmlFor="permitir_criacao_pedidos_delivery_admin"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold">Permitir criação manual de pedidos delivery</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Exibe para o tenant o fluxo de pedido por telefone/contato.
+                  </span>
+                </span>
+                <input
+                  id="permitir_criacao_pedidos_delivery_admin"
+                  type="checkbox"
+                  {...register("permitir_criacao_pedidos_delivery_admin")}
+                  className="h-5 w-5 shrink-0 accent-slate-900"
+                />
+              </label>
+
+              <label
+                htmlFor="exigir_pin_confirmacao_entrega"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold">Exigir PIN na entrega</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Exige PIN em pedidos feitos pelo app do cliente. Pedidos criados pelo admin não exigem PIN.
+                  </span>
+                </span>
+                <input
+                  id="exigir_pin_confirmacao_entrega"
+                  type="checkbox"
+                  {...register("exigir_pin_confirmacao_entrega")}
+                  className="h-5 w-5 shrink-0 accent-slate-900"
+                />
+              </label>
+
+              <label
+                htmlFor="permitir_cpf_na_nota_cliente"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold">Permitir CPF na nota no checkout</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Só fica disponível para o tenant quando a permissão da plataforma também está ativa.
+                  </span>
+                </span>
+                <input
+                  id="permitir_cpf_na_nota_cliente"
+                  type="checkbox"
+                  disabled={!cpfInvoiceConfigurationEnabled}
+                  {...register("permitir_cpf_na_nota_cliente")}
+                  className="h-5 w-5 shrink-0 accent-slate-900 disabled:opacity-50"
+                />
+              </label>
+
+              <div className="rounded-md bg-slate-100 px-3 py-2 text-sm dark:bg-slate-900">
+                Pedidos manuais <strong>{deliveryOrderCreationEnabled ? "permitidos" : "bloqueados"}</strong>
+                {" · "}
+                PIN <strong>{receiptPinRequired ? "exigido" : "não exigido"}</strong>
+                {" · "}
+                CPF na nota <strong>{cpfInvoiceEnabled && cpfInvoiceConfigurationEnabled ? "permitido" : "bloqueado"}</strong>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Puzzle className="h-5 w-5 text-primary" />
+                Módulos do estabelecimento
+              </CardTitle>
+              <CardDescription>
+                Habilite ou desabilite operações disponíveis para esta loja.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {moduleSettings.length === 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Nenhum módulo retornado para esta loja.
+                </div>
+              ) : moduleSettings.map((module) => (
+                <label
+                  key={module.slug}
+                  htmlFor={`module_${module.slug}`}
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold">{module.nome || module.slug}</span>
+                    <span className="block text-xs text-muted-foreground">{module.descricao || module.slug}</span>
+                  </span>
+                  <input
+                    id={`module_${module.slug}`}
+                    type="checkbox"
+                    checked={module.enabled}
+                    onChange={(event) => toggleModuleSetting(module.slug, event.target.checked)}
+                    className="h-5 w-5 shrink-0 accent-slate-900"
+                  />
+                </label>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Card 2: Cores do app */}
         <Card>
           <CardHeader>
@@ -621,6 +827,21 @@ export default function StoreForm() {
           </Button>
         </div>
       </form>
+
+      {isEditing && (
+        <section className="space-y-4 border-t pt-6">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <WalletCards className="h-5 w-5 text-primary" />
+              Financeiro da loja
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Contas bancárias, carteiras e integrações de repasse vinculadas a esta loja.
+            </p>
+          </div>
+          <ContasFinanceirasLoja lojaId={id!} />
+        </section>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { usuarioService, PERFIS_OPTIONS } from "../../features/usuarios/usuarioS
 import { storeService, type Store } from "../../features/stores/storeService";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, Edit, User, Mail, Phone, Shield, Store as StoreIcon, Clock } from "lucide-react";
+import { ArrowLeft, Edit, Eye, User, Mail, Phone, Shield, Store as StoreIcon, Clock } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { formatBrasiliaDate } from "../../lib/dateTime";
 
@@ -29,8 +29,15 @@ export default function UsuarioDetails() {
     return <div className="p-8 text-center text-red-500">Erro ao carregar detalhes do usuário.</div>;
   }
 
-  const storesArr: Store[] = Array.isArray(storesData?.data) ? storesData.data : (Array.isArray(storesData) ? storesData : []);
-  const lojaNome = storesArr.find((s: Store) => s.id === usuario.loja_id)?.nome || usuario.loja_id;
+  const storesArr: Store[] = Array.isArray(storesData?.data?.data)
+    ? storesData.data.data
+    : Array.isArray(storesData?.data)
+      ? storesData.data
+      : Array.isArray(storesData)
+        ? storesData
+        : [];
+  const loja = storesArr.find((s: Store) => s.id === usuario.loja_id);
+  const lojaNome = loja?.nome || usuario.loja_id;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -129,7 +136,17 @@ export default function UsuarioDetails() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Loja</p>
-                <p className="font-medium">{lojaNome}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{lojaNome}</p>
+                  {loja?.id && (
+                    <Link to={`/stores/${loja.id}`}>
+                      <Button variant="outline" size="sm">
+                        <Eye className="mr-2 h-3.5 w-3.5" />
+                        Ver loja
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
 

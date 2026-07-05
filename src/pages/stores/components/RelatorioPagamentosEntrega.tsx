@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Download, FileText, Loader2, Search } from "lucide-react";
 import {
@@ -46,6 +46,24 @@ function originLabel(value: string | undefined | null) {
     salao: "Salão",
   };
   return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
+}
+
+type ApiErrorResponse = {
+  response?: {
+    data?: {
+      error?: {
+        message?: string;
+      } | string;
+    };
+  };
+};
+
+function getReportErrorMessage(error: unknown) {
+  const apiError = error as ApiErrorResponse;
+  const responseError = apiError.response?.data?.error;
+
+  if (typeof responseError === "string") return responseError;
+  return responseError?.message || "Erro ao gerar relatório.";
 }
 
 function buildCsv(report: DeliveryPaymentBillingReport) {
@@ -112,10 +130,8 @@ function downloadCsv(report: DeliveryPaymentBillingReport) {
 
 export default function RelatorioPagamentosEntrega({
   lojaId,
-  storeConfig: _storeConfig,
 }: {
   lojaId: string;
-  storeConfig: any;
 }) {
   const today = dateInputInBrasilia();
   const firstDay = `${today.slice(0, 7)}-01`;
@@ -127,12 +143,13 @@ export default function RelatorioPagamentosEntrega({
   });
 
   const report = reportMutation.data;
-  const splitLabel = useMemo(() => {
-    if (!report?.regra_split) return "Sem regra ativa";
-    if (report.regra_split.tipo_valor === "percentual") return `${report.regra_split.valor}%`;
-    if (report.regra_split.tipo_valor === "fixo") return money(report.regra_split.valor);
-    return `${report.regra_split.tipo_valor} ${report.regra_split.valor}`;
-  }, [report?.regra_split]);
+  const splitLabel = !report?.regra_split
+    ? "Sem regra ativa"
+    : report.regra_split.tipo_valor === "percentual"
+      ? `${report.regra_split.valor}%`
+      : report.regra_split.tipo_valor === "fixo"
+        ? money(report.regra_split.valor)
+        : `${report.regra_split.tipo_valor} ${report.regra_split.valor}`;
 
   return (
     <Card>
@@ -192,7 +209,7 @@ export default function RelatorioPagamentosEntrega({
 
         {reportMutation.error && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-            {(reportMutation.error as any)?.response?.data?.error?.message || "Erro ao gerar relatório."}
+            {getReportErrorMessage(reportMutation.error)}
           </div>
         )}
 

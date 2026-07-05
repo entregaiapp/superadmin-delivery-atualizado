@@ -39,7 +39,13 @@ const contaSchema = z.object({
 
 type ContaFormValues = z.infer<typeof contaSchema>;
 
-export default function ContasFinanceirasLoja({ lojaId }: { lojaId: string }) {
+export default function ContasFinanceirasLoja({
+  lojaId,
+  readOnly = false,
+}: {
+  lojaId: string;
+  readOnly?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContaId, setEditingContaId] = useState<string | null>(null);
@@ -128,9 +134,9 @@ export default function ContasFinanceirasLoja({ lojaId }: { lojaId: string }) {
         agencia: data.agencia || undefined,
         conta: data.conta || undefined,
         digito: data.digito || undefined,
-        tipo_conta: (data.tipo_conta || undefined) as any,
+        tipo_conta: (data.tipo_conta || undefined) as ContaFinanceiraInput["tipo_conta"],
         chave_pix: data.chave_pix || undefined,
-        gateway: (data.gateway || undefined) as any,
+        gateway: (data.gateway || undefined) as ContaFinanceiraInput["gateway"],
         conta_gateway_id: data.conta_gateway_id || undefined,
       };
 
@@ -177,10 +183,12 @@ export default function ContasFinanceirasLoja({ lojaId }: { lojaId: string }) {
         <div>
           <h3 className="text-lg font-medium">Contas Financeiras</h3>
           <p className="text-sm text-muted-foreground">
-            Gerencie os bancos e integrações para onde o saldo desta loja será liquidado ou repassado.
+            {readOnly
+              ? "Bancos e integrações para onde o saldo desta loja será liquidado ou repassado."
+              : "Gerencie os bancos e integrações para onde o saldo desta loja será liquidado ou repassado."}
           </p>
         </div>
-        {!isFormOpen && (
+        {!readOnly && !isFormOpen && (
           <Button onClick={() => openForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Adicionar Conta
@@ -307,9 +315,9 @@ export default function ContasFinanceirasLoja({ lojaId }: { lojaId: string }) {
             <Landmark className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="font-medium text-slate-900 dark:text-slate-100">Nenhuma conta configurada</p>
             <p className="text-sm text-muted-foreground mb-4">
-              A loja não possui nenhuma conta de liquidação bancária. Adicione uma para rastrear recebimentos.
+              A loja não possui nenhuma conta de liquidação bancária configurada.
             </p>
-            <Button variant="outline" onClick={() => openForm()}>Criar Primeira Conta</Button>
+            {!readOnly && <Button variant="outline" onClick={() => openForm()}>Criar Primeira Conta</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -329,34 +337,36 @@ export default function ContasFinanceirasLoja({ lojaId }: { lojaId: string }) {
                           <Badge variant="outline" className="capitalize">{conta.gateway || "Banco"}</Badge>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
-                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => openForm(conta)}>
-                            <Edit className="w-4 h-4 mr-2" /> Editar
-                          </DropdownMenuItem>
-                          {!conta.principal && (
-                            <DropdownMenuItem className="cursor-pointer" onClick={() => setPrincipalMutation.mutate(conta.id)}>
-                              <CheckCircle2 className="w-4 h-4 mr-2 text-blue-500" /> Tornar Principal
+                      {!readOnly && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => openForm(conta)}>
+                              <Edit className="w-4 h-4 mr-2" /> Editar
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => toggleStatusMutation.mutate({ id: conta.id, ativa: !conta.ativa })}>
-                            {conta.ativa ? <XCircle className="w-4 h-4 mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                            {conta.ativa ? "Desativar" : "Ativar"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => {
-                            if (window.confirm("Deseja realmente remover esta conta?")) {
-                              deleteMutation.mutate(conta.id);
-                            }
-                          }}>
-                            <Trash2 className="w-4 h-4 mr-2" /> Remover
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            {!conta.principal && (
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => setPrincipalMutation.mutate(conta.id)}>
+                                <CheckCircle2 className="w-4 h-4 mr-2 text-blue-500" /> Tornar Principal
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => toggleStatusMutation.mutate({ id: conta.id, ativa: !conta.ativa })}>
+                              {conta.ativa ? <XCircle className="w-4 h-4 mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                              {conta.ativa ? "Desativar" : "Ativar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-red-600" onClick={() => {
+                              if (window.confirm("Deseja realmente remover esta conta?")) {
+                                deleteMutation.mutate(conta.id);
+                              }
+                            }}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm text-slate-600 dark:text-slate-400">

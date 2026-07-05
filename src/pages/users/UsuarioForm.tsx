@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,8 +40,15 @@ export default function UsuarioForm() {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
+  const requestedPerfil = searchParams.get("perfil");
+  const requestedLojaId = searchParams.get("loja_id") || "";
+  const returnToStore = searchParams.get("return_to_store");
+  const defaultPerfil = PERFIS_OPTIONS.some((option) => option.value === requestedPerfil)
+    ? requestedPerfil as FormValues["perfil"]
+    : "operador";
 
   const schema = isEditing ? editSchema : createSchema;
 
@@ -49,7 +56,8 @@ export default function UsuarioForm() {
     resolver: zodResolver(schema as any),
     defaultValues: {
       status: "ativo",
-      perfil: "operador",
+      perfil: defaultPerfil,
+      loja_id: requestedLojaId,
     }
   });
 
@@ -59,7 +67,13 @@ export default function UsuarioForm() {
     queryFn: () => storeService.getAll(),
   });
 
-  const stores: Store[] = Array.isArray(storesData?.data) ? storesData.data : (Array.isArray(storesData) ? storesData : []);
+  const stores: Store[] = Array.isArray(storesData?.data?.data)
+    ? storesData.data.data
+    : Array.isArray(storesData?.data)
+      ? storesData.data
+      : Array.isArray(storesData)
+        ? storesData
+        : [];
 
   // Carregar dados do usuário em modo edição
   const { data: usuario, isLoading } = useQuery({
@@ -99,6 +113,10 @@ export default function UsuarioForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+      if (returnToStore) {
+        navigate(`/stores/${returnToStore}`);
+        return;
+      }
       navigate("/users");
     },
     onError: (err: any) => {

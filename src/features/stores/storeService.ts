@@ -57,6 +57,12 @@ export interface StoreReceiptPinPreference {
   exigir_pin_confirmacao_entrega: boolean;
 }
 
+export type StoreConfigurationUpdate = Partial<
+  StoreOrderCreationPreference &
+  StoreCpfInvoicePreference &
+  StoreReceiptPinPreference
+>;
+
 export interface DeliveryPaymentBillingReportFilters {
   dataInicio: string;
   dataFim: string;
@@ -230,6 +236,11 @@ export const storeService = {
     return normalizeStore(unwrapApiData(response.data));
   },
 
+  getConfiguration: async (storeId: string) => {
+    const response = await api.get(`/lojas/${storeId}/configuracoes`);
+    return unwrapApiData(response.data);
+  },
+
   create: async (data: StoreCreatePayload) => {
     const response = await api.post("/lojas", data);
     return normalizeStore(unwrapApiData(response.data));
@@ -292,6 +303,17 @@ export const storeService = {
     const config = unwrapApiData<any>(configResponse.data);
     if (!config?.id) throw new Error("A loja não possui configurações para atualizar.");
     const response = await api.patch(`/configuracoes_loja/${config.id}`, preference);
+    return unwrapApiData(response.data);
+  },
+
+  updateStoreConfiguration: async (
+    storeId: string,
+    configUpdate: StoreConfigurationUpdate,
+  ) => {
+    const configResponse = await api.get(`/lojas/${storeId}/configuracoes`);
+    const config = unwrapApiData<any>(configResponse.data);
+    if (!config?.id) throw new Error("A loja não possui configurações para atualizar.");
+    const response = await api.patch(`/configuracoes_loja/${config.id}`, configUpdate);
     return unwrapApiData(response.data);
   },
 
