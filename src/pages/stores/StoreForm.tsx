@@ -53,6 +53,7 @@ const storeSchema = z.object({
   cor_primaria: colorSchema,
   cor_secundaria: colorSchema,
   tipo_estabelecimento: z.enum(["mercado", "lanchonete", "restaurante", "hibrido", "outro"]),
+  cache_cardapio_ativo: z.boolean(),
   cardapio_configuravel_ativo: z.boolean(),
   permitir_configurar_cpf_na_nota: z.boolean(),
   exibir_avaliacao_experiencia_compra: z.boolean(),
@@ -103,6 +104,7 @@ export default function StoreForm() {
       cor_primaria: DEFAULT_PRIMARY_COLOR,
       cor_secundaria: DEFAULT_SECONDARY_COLOR,
       tipo_estabelecimento: "mercado",
+      cache_cardapio_ativo: false,
       cardapio_configuravel_ativo: false,
       permitir_configurar_cpf_na_nota: true,
       exibir_avaliacao_experiencia_compra: true,
@@ -114,6 +116,7 @@ export default function StoreForm() {
   const secondaryColorValue = watch("cor_secundaria") || DEFAULT_SECONDARY_COLOR;
   const subdomainValue = watch("subdomain") || "";
   const establishmentType = watch("tipo_estabelecimento");
+  const menuCacheEnabled = watch("cache_cardapio_ativo");
   const configurableMenuEnabled = watch("cardapio_configuravel_ativo");
   const cpfInvoiceConfigurationEnabled = watch("permitir_configurar_cpf_na_nota");
   const orderExperienceFeedbackEnabled = watch("exibir_avaliacao_experiencia_compra");
@@ -152,6 +155,7 @@ export default function StoreForm() {
         cor_primaria: store.cor_primaria || DEFAULT_PRIMARY_COLOR,
         cor_secundaria: store.cor_secundaria || DEFAULT_SECONDARY_COLOR,
         tipo_estabelecimento: store.tipo_estabelecimento || "mercado",
+        cache_cardapio_ativo: Boolean(store.cache_cardapio_ativo),
         cardapio_configuravel_ativo: Boolean(store.cardapio_configuravel_ativo),
         permitir_configurar_cpf_na_nota: store.permitir_configurar_cpf_na_nota !== false,
         exibir_avaliacao_experiencia_compra: store.exibir_avaliacao_experiencia_compra !== false,
@@ -167,6 +171,7 @@ export default function StoreForm() {
       const payload: StoreCreatePayload = {
         ...data,
         tipo_estabelecimento: data.tipo_estabelecimento,
+        cache_cardapio_ativo: data.cache_cardapio_ativo === true,
         cardapio_configuravel_ativo: data.cardapio_configuravel_ativo === true,
         permitir_configurar_cpf_na_nota: data.permitir_configurar_cpf_na_nota === true,
         exibir_avaliacao_experiencia_compra: data.exibir_avaliacao_experiencia_compra === true,
@@ -371,6 +376,24 @@ export default function StoreForm() {
             </div>
 
             <label
+              htmlFor="cache_cardapio_ativo"
+              className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+            >
+              <span>
+                <span className="block text-sm font-semibold">Cache para esta loja</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Usa cache em memória para acelerar o cardápio público desta loja. Deixe desativado em catálogos muito grandes.
+                </span>
+              </span>
+              <input
+                id="cache_cardapio_ativo"
+                type="checkbox"
+                {...register("cache_cardapio_ativo")}
+                className="h-5 w-5 shrink-0 accent-slate-900"
+              />
+            </label>
+
+            <label
               htmlFor="cardapio_configuravel_ativo"
               className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
             >
@@ -426,6 +449,8 @@ export default function StoreForm() {
 
             <div className="rounded-md bg-slate-100 px-3 py-2 text-sm dark:bg-slate-900">
               Configuração atual: <strong className="capitalize">{establishmentType || "mercado"}</strong>
+              {" · "}
+              Cache <strong>{menuCacheEnabled ? "ativo" : "desativado"}</strong>
               {" · "}
               Cardápio configurável <strong>{configurableMenuEnabled ? "habilitado" : "desabilitado"}</strong>
               {" · "}

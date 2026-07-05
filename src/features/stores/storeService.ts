@@ -27,6 +27,7 @@ export interface Store {
   cor_primaria?: string | null;
   cor_secundaria?: string | null;
   tipo_estabelecimento: "mercado" | "lanchonete" | "restaurante" | "hibrido" | "outro";
+  cache_cardapio_ativo: boolean;
   cardapio_configuravel_ativo: boolean;
   permitir_configurar_cpf_na_nota: boolean;
   exibir_avaliacao_experiencia_compra: boolean;
@@ -179,6 +180,9 @@ function normalizeStore(rawStore: any): Store {
   const rawConfigurableMenu = rawStore?.cardapio_configuravel_ativo
     ?? rawStore?.cardapioConfiguravelAtivo
     ?? rawStore?.configurableMenuEnabled;
+  const rawMenuCacheEnabled = rawStore?.cache_cardapio_ativo
+    ?? rawStore?.cacheCardapioAtivo
+    ?? rawStore?.menuCacheEnabled;
   const rawCpfInvoiceConfiguration = rawStore?.permitir_configurar_cpf_na_nota
     ?? rawStore?.permitirConfigurarCpfNaNota
     ?? rawStore?.cpfInvoiceConfigurationEnabled;
@@ -195,6 +199,7 @@ function normalizeStore(rawStore: any): Store {
   return {
     ...rawStore,
     tipo_estabelecimento,
+    cache_cardapio_ativo: parseBoolean(rawMenuCacheEnabled, false),
     cardapio_configuravel_ativo: parseBoolean(rawConfigurableMenu, false),
     permitir_configurar_cpf_na_nota: parseBoolean(rawCpfInvoiceConfiguration, true),
     exibir_avaliacao_experiencia_compra: parseBoolean(rawOrderExperienceFeedback, true),

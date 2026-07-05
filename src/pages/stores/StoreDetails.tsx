@@ -204,6 +204,9 @@ export default function StoreDetails() {
                   <Badge variant={store.cardapio_configuravel_ativo ? "success" : "secondary"}>
                     Cardápio configurável {store.cardapio_configuravel_ativo ? "habilitado" : "desabilitado"}
                   </Badge>
+                  <Badge variant={store.cache_cardapio_ativo ? "success" : "secondary"}>
+                    Cache do cardápio {store.cache_cardapio_ativo ? "ativo" : "desativado"}
+                  </Badge>
                   <Badge variant={store.permitir_configurar_cpf_na_nota !== false ? "success" : "secondary"}>
                     CPF na nota {store.permitir_configurar_cpf_na_nota !== false ? "configurável" : "bloqueado"}
                   </Badge>
