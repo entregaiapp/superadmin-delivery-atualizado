@@ -61,6 +61,7 @@ const storeSchema = z.object({
   visivel_no_app_cliente: z.boolean(),
   preco_app_taxa_ativa: z.boolean(),
   permitir_criacao_pedidos_delivery_admin: z.boolean(),
+  aplicar_taxa_pedidos_admin: z.boolean(),
   permitir_cpf_na_nota_cliente: z.boolean(),
   exigir_pin_confirmacao_entrega: z.boolean(),
 });
@@ -122,6 +123,7 @@ export default function StoreForm() {
       visivel_no_app_cliente: true,
       preco_app_taxa_ativa: false,
       permitir_criacao_pedidos_delivery_admin: false,
+      aplicar_taxa_pedidos_admin: false,
       permitir_cpf_na_nota_cliente: false,
       exigir_pin_confirmacao_entrega: false,
     }
@@ -136,6 +138,7 @@ export default function StoreForm() {
   const cpfInvoiceConfigurationEnabled = watch("permitir_configurar_cpf_na_nota");
   const orderExperienceFeedbackEnabled = watch("exibir_avaliacao_experiencia_compra");
   const deliveryOrderCreationEnabled = watch("permitir_criacao_pedidos_delivery_admin");
+  const adminOrderFeeEnabled = watch("aplicar_taxa_pedidos_admin");
   const receiptPinRequired = watch("exigir_pin_confirmacao_entrega");
   const cpfInvoiceEnabled = watch("permitir_cpf_na_nota_cliente");
 
@@ -192,6 +195,7 @@ export default function StoreForm() {
         visivel_no_app_cliente: store.visivel_no_app_cliente !== false,
         preco_app_taxa_ativa: Boolean(store.preco_app_taxa_ativa),
         permitir_criacao_pedidos_delivery_admin: storeConfig?.permitir_criacao_pedidos_delivery_admin === true,
+        aplicar_taxa_pedidos_admin: storeConfig?.aplicar_taxa_pedidos_admin === true,
         permitir_cpf_na_nota_cliente: storeConfig?.permitir_cpf_na_nota_cliente === true,
         exigir_pin_confirmacao_entrega: storeConfig?.exigir_pin_confirmacao_entrega === true,
       });
@@ -201,6 +205,7 @@ export default function StoreForm() {
   useEffect(() => {
     if (storeConfig && isEditing) {
       setValue("permitir_criacao_pedidos_delivery_admin", storeConfig.permitir_criacao_pedidos_delivery_admin === true);
+      setValue("aplicar_taxa_pedidos_admin", storeConfig.aplicar_taxa_pedidos_admin === true);
       setValue("permitir_cpf_na_nota_cliente", storeConfig.permitir_cpf_na_nota_cliente === true);
       setValue("exigir_pin_confirmacao_entrega", storeConfig.exigir_pin_confirmacao_entrega === true);
     }
@@ -221,6 +226,7 @@ export default function StoreForm() {
     mutationFn: async (data: StoreFormValues) => {
       const {
         permitir_criacao_pedidos_delivery_admin,
+        aplicar_taxa_pedidos_admin,
         permitir_cpf_na_nota_cliente,
         exigir_pin_confirmacao_entrega,
         ...storeData
@@ -250,6 +256,7 @@ export default function StoreForm() {
         if (storeConfig?.id) {
           followUpUpdates.push(storeService.updateStoreConfiguration(id!, {
             permitir_criacao_pedidos_delivery_admin,
+            aplicar_taxa_pedidos_admin,
             permitir_cpf_na_nota_cliente,
             exigir_pin_confirmacao_entrega,
           }));
@@ -581,6 +588,24 @@ export default function StoreForm() {
               </label>
 
               <label
+                htmlFor="aplicar_taxa_pedidos_admin"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold">Aplicar taxa para pedidos no admin</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Quando ativo, pedidos delivery criados pelo admin usam os preços com taxa do app.
+                  </span>
+                </span>
+                <input
+                  id="aplicar_taxa_pedidos_admin"
+                  type="checkbox"
+                  {...register("aplicar_taxa_pedidos_admin")}
+                  className="h-5 w-5 shrink-0 accent-slate-900"
+                />
+              </label>
+
+              <label
                 htmlFor="exigir_pin_confirmacao_entrega"
                 className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
               >
@@ -619,6 +644,8 @@ export default function StoreForm() {
 
               <div className="rounded-md bg-slate-100 px-3 py-2 text-sm dark:bg-slate-900">
                 Pedidos manuais <strong>{deliveryOrderCreationEnabled ? "permitidos" : "bloqueados"}</strong>
+                {" · "}
+                Taxa no admin <strong>{adminOrderFeeEnabled ? "aplicada" : "desativada"}</strong>
                 {" · "}
                 PIN <strong>{receiptPinRequired ? "exigido" : "não exigido"}</strong>
                 {" · "}

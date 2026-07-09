@@ -49,6 +49,10 @@ export interface StoreOrderCreationPreference {
   permitir_criacao_pedidos_delivery_admin: boolean;
 }
 
+export interface StoreAdminOrderFeePreference {
+  aplicar_taxa_pedidos_admin: boolean;
+}
+
 export interface StoreCpfInvoicePreference {
   permitir_cpf_na_nota_cliente: boolean;
 }
@@ -59,6 +63,7 @@ export interface StoreReceiptPinPreference {
 
 export type StoreConfigurationUpdate = Partial<
   StoreOrderCreationPreference &
+  StoreAdminOrderFeePreference &
   StoreCpfInvoicePreference &
   StoreReceiptPinPreference
 >;

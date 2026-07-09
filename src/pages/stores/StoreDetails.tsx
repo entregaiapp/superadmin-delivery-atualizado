@@ -65,6 +65,7 @@ export default function StoreDetails() {
   ];
 
   const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
+  const adminOrderFeeEnabled = storeConfig?.aplicar_taxa_pedidos_admin === true;
   const receiptPinRequired = storeConfig?.exigir_pin_confirmacao_entrega === true;
   const cpfInvoiceEnabled = storeConfig?.permitir_cpf_na_nota_cliente === true;
   const moduleList: StoreModuleView[] = Array.isArray(modules) ? modules : [];
@@ -307,6 +308,16 @@ export default function StoreDetails() {
                       </span>
                     </span>
                     {preferenceBadge(deliveryOrderCreationEnabled, "Permitido", "Bloqueado")}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="block text-sm font-medium">Aplicar taxa para pedidos no admin</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Pedidos delivery criados pelo admin usam os preços com taxa do app.
+                      </span>
+                    </span>
+                    {preferenceBadge(adminOrderFeeEnabled, "Aplicada", "Desativada")}
                   </div>
 
                   <div className="flex items-center justify-between gap-4 rounded-md border p-3">
