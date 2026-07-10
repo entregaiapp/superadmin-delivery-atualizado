@@ -25,6 +25,7 @@ import LegalDocumentsEditor from "../../pages/legalDocuments/LegalDocumentsEdito
 import SystemHealth from "../../pages/observability/SystemHealth";
 import PlatformBanners from "../../pages/platformBanners/PlatformBanners";
 import CustomerFeedbacks from "../../pages/feedbacks/CustomerFeedbacks";
+import PrintingOperations from "../../pages/printing/PrintingOperations";
 
 export function AppRoutes() {
   return (
@@ -67,6 +68,7 @@ export function AppRoutes() {
         <Route path="security" element={<SecurityMfa />} />
         <Route path="legal-documents" element={<LegalDocumentsEditor />} />
         <Route path="system-health" element={<SystemHealth />} />
+        <Route path="printing" element={<PrintingOperations />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
