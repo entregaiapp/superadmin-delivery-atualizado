@@ -5,6 +5,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Box,
+  CheckCircle2,
   Clock,
   CreditCard,
   DollarSign,
@@ -25,6 +26,7 @@ import {
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useMetricas } from "../../hooks/useMetricas";
 import { storeService, type Store as StoreType } from "../../features/stores/storeService";
+import { api } from "../../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
@@ -312,6 +314,21 @@ export default function Dashboard() {
   }), [dataInicio, dataFim, lojaId]);
 
   const { data, isLoading, error, refetch, isFetching } = useMetricas(filters);
+  const financeiroQuery = useQuery({
+    queryKey: ["financeiro-superadmin", dataInicio, dataFim, lojaId],
+    queryFn: async () => {
+      const { data: response } = await api.get("/financeiro/superadmin", {
+        params: {
+          dataInicio: dataInicio || undefined,
+          dataFim: dataFim || undefined,
+          loja_id: lojaId || undefined,
+          dateType: "order",
+        },
+      });
+      return response.data;
+    },
+    staleTime: 60 * 1000,
+  });
   const m = data ? normalizeDashboard(data) : null;
 
   if (isLoading) {
@@ -376,7 +393,29 @@ export default function Dashboard() {
     };
   const canalEntrega = resumoCanal("entrega");
   const canalApp = resumoCanal("app");
-  const splitApurado = fin.splits_apurados || {
+  const financeiroCanonic = financeiroQuery.data || null;
+  const splitApurado = financeiroCanonic
+    ? {
+        resumo: {
+          quantidade_pedidos_total: financeiroCanonic.resumo?.quantidade_pedidos || 0,
+          quantidade_pedidos_cobrados: financeiroCanonic.lojas?.reduce((sum: number, item: any) => sum + Number(item.quantidade_pedidos || 0), 0) || 0,
+          valor_bruto_total: financeiroCanonic.resumo?.valor_bruto_pedidos_validos || 0,
+          valor_final_cobranca: financeiroCanonic.resumo?.taxa_liquida || 0,
+          taxa_recebida_via_split: financeiroCanonic.resumo?.taxa_recebida_via_split || 0,
+          taxa_pendente_liquidacao: financeiroCanonic.resumo?.taxa_pendente_liquidacao || 0,
+          taxa_a_cobrar_estabelecimento: financeiroCanonic.resumo?.taxa_a_cobrar_estabelecimento || 0,
+          diferenca_conciliacao: financeiroCanonic.resumo?.diferenca_conciliacao || 0,
+        },
+        categorias: financeiroCanonic.lojas?.map((store: any) => ({
+          categoria: store.loja_id,
+          label: store.loja_nome,
+          quantidade_pedidos: store.quantidade_pedidos,
+          quantidade_cobrada: store.quantidade_pedidos,
+          valor_bruto: store.valor_bruto_pedidos_validos,
+          valor_cobranca: store.taxa_liquida,
+        })) || [],
+      }
+    : fin.splits_apurados || {
     resumo: {
       quantidade_pedidos_total: 0,
       quantidade_pedidos_cobrados: 0,
@@ -387,6 +426,7 @@ export default function Dashboard() {
   };
   const splitResumo = splitApurado.resumo || {};
   const splitCategorias = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
+  const lojasFinanceiras = Array.isArray(financeiroCanonic?.lojas) ? financeiroCanonic.lojas : [];
 
   return (
     <div className="space-y-6">
@@ -424,8 +464,17 @@ export default function Dashboard() {
             </select>
           </div>
           <div className="flex items-end">
-            <Button variant="outline" className="w-full" size="sm" onClick={() => refetch()} disabled={isFetching}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            <Button
+              variant="outline"
+              className="w-full"
+              size="sm"
+              onClick={() => {
+                void refetch();
+                void financeiroQuery.refetch();
+              }}
+              disabled={isFetching || financeiroQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching || financeiroQuery.isFetching ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
           </div>
@@ -541,7 +590,19 @@ export default function Dashboard() {
         <StatCard title="Cobrança da plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
           sub={`${num(splitResumo.quantidade_pedidos_cobrados)} de ${num(splitResumo.quantidade_pedidos_total)} pedido(s) - ${fmt(splitResumo.valor_bruto_total)} bruto`}
           color="text-indigo-500"
-          help="Valor calculado com base nos pedidos do período e nas regras de cobrança da plataforma." />
+          help="Taxa líquida calculada pela fonte canônica financeira para pedidos elegíveis no período." />
+        <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
+          sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
+          color="text-emerald-500"
+          help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
+        <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
+          sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
+          color="text-orange-500"
+          help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
+        <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
+          sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
+          color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
+          help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
       </div>
 
       {splitCategorias.length > 0 && (
@@ -572,6 +633,64 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {lojasFinanceiras.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Store className="h-4 w-4 text-indigo-500" aria-hidden="true" />
+              Conciliação por loja
+              <MetricHelp text="Tabela calculada pela fonte canônica financeira. A diferença deve ser zero para a loja ser considerada conciliada." />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                  <th className="px-3 py-2">Loja</th>
+                  <th className="px-3 py-2 text-right">Pedidos</th>
+                  <th className="px-3 py-2 text-right">GMV válido</th>
+                  <th className="px-3 py-2 text-right">Base elegível</th>
+                  <th className="px-3 py-2 text-right">Taxa líquida</th>
+                  <th className="px-3 py-2 text-right">Split recebido</th>
+                  <th className="px-3 py-2 text-right">Split pendente</th>
+                  <th className="px-3 py-2 text-right">A cobrar</th>
+                  <th className="px-3 py-2 text-right">Diferença</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lojasFinanceiras.map((store: any) => (
+                  <tr key={store.loja_id} className="border-b last:border-0">
+                    <td className="px-3 py-3 font-medium">{store.loja_nome}</td>
+                    <td className="px-3 py-3 text-right">{num(store.quantidade_pedidos)}</td>
+                    <td className="px-3 py-3 text-right">{fmt(store.valor_bruto_pedidos_validos)}</td>
+                    <td className="px-3 py-3 text-right">{fmt(store.base_elegivel)}</td>
+                    <td className="px-3 py-3 text-right font-semibold">{fmt(store.taxa_liquida)}</td>
+                    <td className="px-3 py-3 text-right">{fmt(store.taxa_recebida_via_split)}</td>
+                    <td className="px-3 py-3 text-right">{fmt(store.taxa_pendente_liquidacao)}</td>
+                    <td className="px-3 py-3 text-right">{fmt(store.taxa_a_cobrar_estabelecimento)}</td>
+                    <td className={`px-3 py-3 text-right font-semibold ${Number(store.diferenca_conciliacao || 0) === 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {fmt(store.diferenca_conciliacao)}
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        store.status === "conciliado"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : store.status === "pendente"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-red-50 text-red-700"
+                      }`}>
+                        {store.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
       )}
