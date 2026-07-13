@@ -13,7 +13,9 @@ import {
   Loader2,
   Package,
   RefreshCw,
+  Search,
   ShieldAlert,
+  SlidersHorizontal,
   Smile,
   ShoppingCart,
   Store,
@@ -50,6 +52,10 @@ function labelMetodoPagamento(value: string | undefined | null) {
     pix: "PIX",
     cartao_credito: "Cartão de crédito",
     cartao_debito: "Cartão de débito",
+    card: "Cartão",
+    cash: "Dinheiro",
+    fiado: "Fiado",
+    credit_tab: "Fiado",
     outros: "Outros",
   };
   return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
@@ -150,6 +156,35 @@ type SplitCategorySummary = {
   valor_bruto?: number | string;
   valor_cobranca?: number | string;
 };
+
+type SpecificPaymentSearch = {
+  situacao: string;
+  canal: string;
+  metodo: string;
+};
+
+type SpecificPaymentResult = {
+  quantidade: number;
+  valorTotal: number;
+  valorLiquido: number;
+  taxasGateway: number;
+};
+
+const filterControlClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
+function formatDateLabel(value: string) {
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function matchesPaymentMethod(value: string | undefined | null, filter: string) {
+  if (!filter) return true;
+  const method = String(value || "").toLowerCase();
+  if (filter === "cartao") return method === "card" || method.startsWith("cartao");
+  if (filter === "dinheiro") return method === "dinheiro" || method === "cash";
+  if (filter === "fiado") return method === "fiado" || method === "credit_tab";
+  return method === filter;
+}
 
 function MetricHelp({ text }: { text: string }) {
   return (
@@ -351,6 +386,14 @@ export default function Dashboard() {
   const [dataInicio, setDataInicio] = useState(thirtyDaysAgo);
   const [dataFim, setDataFim] = useState(today);
   const [lojaId, setLojaId] = useState("");
+  const [periodoFiltro, setPeriodoFiltro] = useState("30dias");
+  const [dataInicioFiltro, setDataInicioFiltro] = useState(thirtyDaysAgo);
+  const [dataFimFiltro, setDataFimFiltro] = useState(today);
+  const [lojaIdFiltro, setLojaIdFiltro] = useState("");
+  const [situacaoFiltro, setSituacaoFiltro] = useState("recebido");
+  const [canalFiltro, setCanalFiltro] = useState("");
+  const [metodoFiltro, setMetodoFiltro] = useState("");
+  const [pesquisaEspecifica, setPesquisaEspecifica] = useState<SpecificPaymentSearch | null>(null);
 
   const { data: storesData } = useQuery({
     queryKey: ["stores", "dashboard-filter"],
@@ -428,6 +471,26 @@ export default function Dashboard() {
   const pagamentosPorCanal = (pagamentosDetalhados.por_canal_pagamento || []) as PaymentChannelSummary[];
   const pagamentosPorFormaCanal = (pagamentosDetalhados.por_forma_e_canal || []) as PaymentMethodChannelSummary[];
   const pagamentosPorStatus = (pagamentosDetalhados.por_status || []) as PaymentStatusSummary[];
+  const linhasPesquisaEspecifica = pesquisaEspecifica
+    ? pagamentosPorFormaCanal.filter((item) => {
+        const matchesSituation = !pesquisaEspecifica.situacao
+          || String(item.situacao_financeira || "").toLowerCase() === pesquisaEspecifica.situacao;
+        const matchesChannel = !pesquisaEspecifica.canal
+          || (pesquisaEspecifica.canal === "offline"
+            ? item.canal_pagamento === "entrega"
+            : item.canal_pagamento === pesquisaEspecifica.canal);
+        return matchesSituation && matchesChannel && matchesPaymentMethod(item.metodo_pagamento, pesquisaEspecifica.metodo);
+      })
+    : [];
+  const resultadoPesquisaEspecifica = linhasPesquisaEspecifica.reduce<SpecificPaymentResult>(
+    (acc, item) => ({
+      quantidade: acc.quantidade + Number(item.quantidade || 0),
+      valorTotal: acc.valorTotal + Number(item.valor_total || 0),
+      valorLiquido: acc.valorLiquido + Number(item.valor_liquido || 0),
+      taxasGateway: acc.taxasGateway + Number(item.taxas_gateway || 0),
+    }),
+    { quantidade: 0, valorTotal: 0, valorLiquido: 0, taxasGateway: 0 },
+  );
   const experiencia = m.experienciaCompra?.resumo || {};
   const experienciaPorLoja = (m.experienciaCompra?.por_loja || []) as StoreExperienceSummary[];
   const totalPagamentosDetalhados = resumoPagamentos.total_pagamentos ?? fin.pagamentos.total_pagamentos;
@@ -486,6 +549,8 @@ export default function Dashboard() {
   const splitCategorias: SplitCategorySummary[] = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
   const lojasFinanceiras: CanonicalStoreFinancial[] = Array.isArray(financeiroCanonic?.lojas) ? financeiroCanonic.lojas : [];
   const isStoreDashboard = m.scope === "store";
+  const periodoInvalido = Boolean(dataInicioFiltro && dataFimFiltro && dataInicioFiltro > dataFimFiltro);
+  const lojaPesquisada = stores.find((store) => store.id === lojaId);
 
   return (
     <div className="space-y-6">
@@ -506,50 +571,240 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className={`grid gap-3 sm:grid-cols-4 lg:min-w-[680px] ${
-          isStoreDashboard ? "rounded-xl bg-white/10 p-3" : ""
-        }`}>
-          <div className="space-y-1">
-            <Label htmlFor="dataInicio" className={isStoreDashboard ? "text-slate-200" : ""}>Início</Label>
-            <Input id="dataInicio" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className={isStoreDashboard ? "border-white/20 bg-white text-slate-950" : ""} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="dataFim" className={isStoreDashboard ? "text-slate-200" : ""}>Fim</Label>
-            <Input id="dataFim" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className={isStoreDashboard ? "border-white/20 bg-white text-slate-950" : ""} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="lojaId" className={isStoreDashboard ? "text-slate-200" : ""}>Loja</Label>
-            <select
-              id="lojaId"
-              value={lojaId}
-              onChange={(e) => setLojaId(e.target.value)}
-              className={`flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                isStoreDashboard ? "border-white/20 bg-white text-slate-950" : "bg-transparent"
-              }`}
-            >
-              <option value="">Todas as lojas</option>
-              {stores.map((store) => (
-                <option key={store.id} value={store.id}>{store.nome}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <Button
-              variant="outline"
-              className={isStoreDashboard ? "w-full border-white/20 bg-white text-slate-950 hover:bg-slate-100" : "w-full"}
-              size="sm"
-              onClick={() => {
-                void refetch();
-                void financeiroQuery.refetch();
-              }}
-              disabled={isFetching || financeiroQuery.isFetching}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching || financeiroQuery.isFetching ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
+        <div className={`rounded-lg px-3 py-2 text-sm ${isStoreDashboard ? "bg-white/10 text-slate-200" : "border bg-muted/40 text-muted-foreground"}`}>
+          <p className="text-xs">Período consultado</p>
+          <p className={`mt-0.5 font-medium ${isStoreDashboard ? "text-white" : "text-foreground"}`}>
+            {formatDateLabel(dataInicio)} a {formatDateLabel(dataFim)}
+          </p>
         </div>
       </div>
+
+      <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-800">
+        <CardHeader className="border-b bg-slate-50/80 pb-4 dark:bg-slate-900/50">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <SlidersHorizontal className="h-4 w-4 text-primary" aria-hidden="true" />
+            Pesquisa de valor específico
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Combine os filtros para localizar um valor financeiro específico no dashboard.
+          </p>
+        </CardHeader>
+        <CardContent className="pt-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="periodoFiltro">Período</Label>
+              <select
+                id="periodoFiltro"
+                value={periodoFiltro}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPeriodoFiltro(value);
+                  if (value === "personalizado") return;
+
+                  const end = new Date();
+                  const start = new Date(end);
+                  if (value === "ontem") {
+                    start.setDate(start.getDate() - 1);
+                    end.setDate(end.getDate() - 1);
+                  } else {
+                    const days = value === "7dias" ? 6 : value === "90dias" ? 89 : value === "30dias" ? 29 : 0;
+                    start.setDate(start.getDate() - days);
+                  }
+                  setDataInicioFiltro(dateInputInBrasilia(start));
+                  setDataFimFiltro(dateInputInBrasilia(end));
+                }}
+                className={filterControlClass}
+              >
+                <option value="hoje">Hoje</option>
+                <option value="ontem">Ontem</option>
+                <option value="7dias">Últimos 7 dias</option>
+                <option value="30dias">Últimos 30 dias</option>
+                <option value="90dias">Últimos 90 dias</option>
+                <option value="personalizado">Período personalizado</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="dataInicioFiltro">Data inicial</Label>
+              <Input
+                id="dataInicioFiltro"
+                type="date"
+                value={dataInicioFiltro}
+                onChange={(event) => {
+                  setPeriodoFiltro("personalizado");
+                  setDataInicioFiltro(event.target.value);
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="dataFimFiltro">Data final</Label>
+              <Input
+                id="dataFimFiltro"
+                type="date"
+                value={dataFimFiltro}
+                onChange={(event) => {
+                  setPeriodoFiltro("personalizado");
+                  setDataFimFiltro(event.target.value);
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="lojaIdFiltro">Loja</Label>
+              <select id="lojaIdFiltro" value={lojaIdFiltro} onChange={(event) => setLojaIdFiltro(event.target.value)} className={filterControlClass}>
+                <option value="">Todas as lojas</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>{store.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="situacaoFiltro">Situação do pagamento</Label>
+              <select id="situacaoFiltro" value={situacaoFiltro} onChange={(event) => setSituacaoFiltro(event.target.value)} className={filterControlClass}>
+                <option value="">Todas as situações</option>
+                <option value="recebido">Pagamentos recebidos</option>
+                <option value="previsto">Pagamentos previstos</option>
+                <option value="estornado">Pagamentos estornados</option>
+                <option value="rejeitado">Pagamentos rejeitados</option>
+                <option value="cancelado">Pagamentos cancelados</option>
+                <option value="expirado">Pagamentos expirados</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="canalFiltro">Canal do pagamento</Label>
+              <select id="canalFiltro" value={canalFiltro} onChange={(event) => setCanalFiltro(event.target.value)} className={filterControlClass}>
+                <option value="">Todos os canais</option>
+                <option value="app">Pagamentos no app</option>
+                <option value="offline">Pagamentos offline/na entrega</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="metodoFiltro">Forma de pagamento</Label>
+              <select id="metodoFiltro" value={metodoFiltro} onChange={(event) => setMetodoFiltro(event.target.value)} className={filterControlClass}>
+                <option value="">Todas as formas</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao">Cartão de crédito ou débito</option>
+                <option value="pix">PIX</option>
+                <option value="fiado">Fiado</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const sameQuery = dataInicio === dataInicioFiltro && dataFim === dataFimFiltro && lojaId === lojaIdFiltro;
+                  setDataInicio(dataInicioFiltro);
+                  setDataFim(dataFimFiltro);
+                  setLojaId(lojaIdFiltro);
+                  setPesquisaEspecifica({ situacao: situacaoFiltro, canal: canalFiltro, metodo: metodoFiltro });
+                  if (sameQuery) {
+                    void refetch();
+                    void financeiroQuery.refetch();
+                  }
+                }}
+                disabled={periodoInvalido || isFetching || financeiroQuery.isFetching}
+              >
+                {isFetching || financeiroQuery.isFetching
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Search className="mr-2 h-4 w-4" />}
+                Pesquisar valor específico
+              </Button>
+            </div>
+          </div>
+
+          {periodoInvalido && (
+            <p className="mt-3 text-sm font-medium text-red-600">A data inicial não pode ser posterior à data final.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {pesquisaEspecifica && (
+        <Card className="overflow-hidden border-primary/30 shadow-sm">
+          <CardHeader className="border-b bg-primary/[0.04]">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Search className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Resultado da pesquisa específica
+                </CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {lojaPesquisada?.nome || "Todas as lojas"} · {formatDateLabel(dataInicio)} a {formatDateLabel(dataFim)}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
+                  {pesquisaEspecifica.situacao ? labelSituacaoFinanceira(pesquisaEspecifica.situacao) : "Todas as situações"}
+                </span>
+                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
+                  {pesquisaEspecifica.canal === "app" ? "No app" : pesquisaEspecifica.canal === "offline" ? "Offline/na entrega" : "Todos os canais"}
+                </span>
+                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
+                  {pesquisaEspecifica.metodo ? labelMetodoPagamento(pesquisaEspecifica.metodo) : "Todas as formas"}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
+                <p className="text-xs font-medium text-muted-foreground">Valor encontrado</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.valorTotal)}</p>
+              </div>
+              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
+                <p className="text-xs font-medium text-muted-foreground">Pagamentos</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">{num(resultadoPesquisaEspecifica.quantidade)}</p>
+              </div>
+              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
+                <p className="text-xs font-medium text-muted-foreground">Valor líquido</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.valorLiquido)}</p>
+              </div>
+              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
+                <p className="text-xs font-medium text-muted-foreground">Taxas de pagamento online</p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.taxasGateway)}</p>
+              </div>
+            </div>
+
+            {linhasPesquisaEspecifica.length > 0 ? (
+              <div className="mt-5 overflow-x-auto rounded-lg border">
+                <table className="w-full min-w-[720px] text-sm">
+                  <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3">Forma</th>
+                      <th className="px-4 py-3">Canal</th>
+                      <th className="px-4 py-3">Situação</th>
+                      <th className="px-4 py-3 text-right">Pagamentos</th>
+                      <th className="px-4 py-3 text-right">Valor</th>
+                      <th className="px-4 py-3 text-right">Líquido</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linhasPesquisaEspecifica.map((item) => (
+                      <tr key={`${item.metodo_pagamento}-${item.canal_pagamento}-${item.situacao_financeira}`} className="border-t">
+                        <td className="px-4 py-3 font-medium">{labelMetodoPagamento(item.metodo_pagamento)}</td>
+                        <td className="px-4 py-3">{labelCanalPagamento(item.canal_pagamento)}</td>
+                        <td className="px-4 py-3">{labelSituacaoFinanceira(item.situacao_financeira)}</td>
+                        <td className="px-4 py-3 text-right">{num(item.quantidade)}</td>
+                        <td className="px-4 py-3 text-right font-semibold">{fmt(item.valor_total)}</td>
+                        <td className="px-4 py-3 text-right">{fmt(item.valor_liquido)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                Nenhum pagamento foi encontrado com a combinação de filtros selecionada.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <DashboardSection
         title={isStoreDashboard ? "Resumo operacional" : "Visão geral"}
