@@ -115,6 +115,42 @@ type StoreExperienceSummary = {
   ruim?: number | string;
 };
 
+type CanonicalStoreFinancial = {
+  loja_id: string;
+  loja_nome: string;
+  quantidade_pedidos?: number | string;
+  valor_bruto_pedidos_validos?: number | string;
+  base_elegivel?: number | string;
+  taxa_liquida?: number | string;
+  taxa_recebida_via_split?: number | string;
+  taxa_pendente_liquidacao?: number | string;
+  taxa_a_cobrar_estabelecimento?: number | string;
+  diferenca_conciliacao?: number | string;
+  status?: string;
+};
+
+type CanonicalFinancialResponse = {
+  resumo?: {
+    quantidade_pedidos?: number | string;
+    valor_bruto_pedidos_validos?: number | string;
+    taxa_liquida?: number | string;
+    taxa_recebida_via_split?: number | string;
+    taxa_pendente_liquidacao?: number | string;
+    taxa_a_cobrar_estabelecimento?: number | string;
+    diferenca_conciliacao?: number | string;
+  };
+  lojas?: CanonicalStoreFinancial[];
+};
+
+type SplitCategorySummary = {
+  categoria: string;
+  label?: string;
+  quantidade_pedidos?: number | string;
+  quantidade_cobrada?: number | string;
+  valor_bruto?: number | string;
+  valor_cobranca?: number | string;
+};
+
 function MetricHelp({ text }: { text: string }) {
   return (
     <span className="relative inline-flex shrink-0 items-center">
@@ -167,6 +203,28 @@ function StatCard({ title, value, icon: Icon, sub, color = "text-primary", trend
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function DashboardSection({
+  title,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
+  icon: ElementType;
+}) {
+  return (
+    <div className="flex items-start gap-3 pt-1">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </div>
+      <div>
+        <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
   );
 }
 
@@ -393,12 +451,12 @@ export default function Dashboard() {
     };
   const canalEntrega = resumoCanal("entrega");
   const canalApp = resumoCanal("app");
-  const financeiroCanonic = financeiroQuery.data || null;
+  const financeiroCanonic = (financeiroQuery.data || null) as CanonicalFinancialResponse | null;
   const splitApurado = financeiroCanonic
     ? {
         resumo: {
           quantidade_pedidos_total: financeiroCanonic.resumo?.quantidade_pedidos || 0,
-          quantidade_pedidos_cobrados: financeiroCanonic.lojas?.reduce((sum: number, item: any) => sum + Number(item.quantidade_pedidos || 0), 0) || 0,
+          quantidade_pedidos_cobrados: financeiroCanonic.lojas?.reduce((sum, item) => sum + Number(item.quantidade_pedidos || 0), 0) || 0,
           valor_bruto_total: financeiroCanonic.resumo?.valor_bruto_pedidos_validos || 0,
           valor_final_cobranca: financeiroCanonic.resumo?.taxa_liquida || 0,
           taxa_recebida_via_split: financeiroCanonic.resumo?.taxa_recebida_via_split || 0,
@@ -406,7 +464,7 @@ export default function Dashboard() {
           taxa_a_cobrar_estabelecimento: financeiroCanonic.resumo?.taxa_a_cobrar_estabelecimento || 0,
           diferenca_conciliacao: financeiroCanonic.resumo?.diferenca_conciliacao || 0,
         },
-        categorias: financeiroCanonic.lojas?.map((store: any) => ({
+        categorias: financeiroCanonic.lojas?.map((store) => ({
           categoria: store.loja_id,
           label: store.loja_nome,
           quantidade_pedidos: store.quantidade_pedidos,
@@ -425,37 +483,49 @@ export default function Dashboard() {
     categorias: [],
   };
   const splitResumo = splitApurado.resumo || {};
-  const splitCategorias = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
-  const lojasFinanceiras = Array.isArray(financeiroCanonic?.lojas) ? financeiroCanonic.lojas : [];
+  const splitCategorias: SplitCategorySummary[] = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
+  const lojasFinanceiras: CanonicalStoreFinancial[] = Array.isArray(financeiroCanonic?.lojas) ? financeiroCanonic.lojas : [];
+  const isStoreDashboard = m.scope === "store";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className={`flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between ${
+        isStoreDashboard
+          ? "rounded-xl bg-slate-900 p-5 text-white shadow-sm dark:bg-slate-950"
+          : ""
+      }`}>
         <div>
+          {isStoreDashboard && (
+            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-300">Visão da loja</p>
+          )}
           <h2 className="text-2xl font-bold tracking-tight">
-            {m.scope === "store" ? `Dashboard da Loja: ${m.loja?.nome || "Selecionada"}` : "Visão Geral da Plataforma"}
+            {isStoreDashboard ? m.loja?.nome || "Loja selecionada" : "Visão Geral da Plataforma"}
           </h2>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className={`mt-1 text-sm ${isStoreDashboard ? "text-slate-300" : "text-muted-foreground"}`}>
             Atualizado em {m.gerado_em ? formatBrasiliaDate(m.gerado_em, { dateStyle: "short", timeStyle: "short" }) : "-"}
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-4 lg:min-w-[680px]">
+        <div className={`grid gap-3 sm:grid-cols-4 lg:min-w-[680px] ${
+          isStoreDashboard ? "rounded-xl bg-white/10 p-3" : ""
+        }`}>
           <div className="space-y-1">
-            <Label htmlFor="dataInicio">Início</Label>
-            <Input id="dataInicio" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+            <Label htmlFor="dataInicio" className={isStoreDashboard ? "text-slate-200" : ""}>Início</Label>
+            <Input id="dataInicio" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className={isStoreDashboard ? "border-white/20 bg-white text-slate-950" : ""} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="dataFim">Fim</Label>
-            <Input id="dataFim" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+            <Label htmlFor="dataFim" className={isStoreDashboard ? "text-slate-200" : ""}>Fim</Label>
+            <Input id="dataFim" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className={isStoreDashboard ? "border-white/20 bg-white text-slate-950" : ""} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="lojaId">Loja</Label>
+            <Label htmlFor="lojaId" className={isStoreDashboard ? "text-slate-200" : ""}>Loja</Label>
             <select
               id="lojaId"
               value={lojaId}
               onChange={(e) => setLojaId(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className={`flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                isStoreDashboard ? "border-white/20 bg-white text-slate-950" : "bg-transparent"
+              }`}
             >
               <option value="">Todas as lojas</option>
               {stores.map((store) => (
@@ -466,7 +536,7 @@ export default function Dashboard() {
           <div className="flex items-end">
             <Button
               variant="outline"
-              className="w-full"
+              className={isStoreDashboard ? "w-full border-white/20 bg-white text-slate-950 hover:bg-slate-100" : "w-full"}
               size="sm"
               onClick={() => {
                 void refetch();
@@ -481,13 +551,20 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <DashboardSection
+        title={isStoreDashboard ? "Resumo operacional" : "Visão geral"}
+        description={isStoreDashboard
+          ? "Principais resultados e estrutura da loja no período selecionado."
+          : "Principais indicadores consolidados da plataforma."}
+        icon={ShoppingCart}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Lojas Ativas" value={num(r.lojas_ativas)} icon={Store}
-          sub={`${num(r.total_lojas)} total · ${num(r.lojas_inativas)} inativas`} color="text-indigo-500"
-          help="Quantidade de lojas cadastradas com status ativo. O total e as inativas mostram a situação atual do cadastro no escopo selecionado." />
-        <StatCard title="Clientes Ativos" value={num(r.clientes_ativos)} icon={Users}
-          sub={`${num(r.total_clientes)} total · ${num(r.clientes_bloqueados)} bloqueados`} color="text-cyan-500"
-          help="Clientes cadastrados que não estão bloqueados. Esta é uma contagem cadastral do escopo selecionado, não uma soma de compras do período." />
+        {!isStoreDashboard && (
+          <StatCard title="Lojas Ativas" value={num(r.lojas_ativas)} icon={Store}
+            sub={`${num(r.total_lojas)} total · ${num(r.lojas_inativas)} inativas`} color="text-indigo-500"
+            help="Quantidade de lojas cadastradas com status ativo. O total e as inativas mostram a situação atual do cadastro no escopo selecionado." />
+        )}
         <StatCard title="Faturamento (Entregues)" value={fmt(ped.valor_pedidos_entregues)} icon={DollarSign}
           sub={`${fmt(ped.valor_total_pedidos)} em pedidos totais`} color="text-emerald-500" trend="up"
           help="Soma do campo total apenas dos pedidos com status entregue dentro do período filtrado. O subtítulo mostra o valor bruto de todos os pedidos do período, incluindo outros status." />
@@ -501,6 +578,9 @@ export default function Dashboard() {
           sub={`${num(experiencia.otimo)} ótimo · ${num(experiencia.bom)} bom · ${num(experiencia.ruim)} ruim`}
           color="text-rose-500"
           help="Total de avaliações simples registradas pelos clientes no fim do pedido dentro do período filtrado, separadas entre ótimo, bom e ruim." />
+        <StatCard title="Clientes Ativos" value={num(r.clientes_ativos)} icon={Users}
+          sub={`${num(r.total_clientes)} total · ${num(r.clientes_bloqueados)} bloqueados`} color="text-cyan-500"
+          help="Clientes cadastrados que não estão bloqueados. Esta é uma contagem cadastral do escopo selecionado, não uma soma de compras do período." />
         <StatCard title="Produtos Ativos" value={num(r.produtos_ativos)} icon={Package}
           sub={`${num(r.total_produtos)} total · ${num(r.total_categorias)} categorias`} color="text-orange-500"
           help="Produtos com status ativo no cadastro atual do escopo selecionado. O total inclui todos os produtos cadastrados, ativos ou não." />
@@ -545,7 +625,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {experienciaPorLoja.length > 0 && (
+      {!isStoreDashboard && experienciaPorLoja.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -576,7 +656,15 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <DashboardSection
+        title="Financeiro do período"
+        description={isStoreDashboard
+          ? "Valores recebidos, previstos e estornados da loja, separados da cobrança da plataforma."
+          : "Resumo financeiro consolidado das lojas no período selecionado."}
+        icon={CreditCard}
+      />
+
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isStoreDashboard ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
         <StatCard title="Pagamentos Recebidos" value={fmt(valorRecebido)} icon={CreditCard}
           sub={`${num(pagamentosRecebidos)} de ${num(totalPagamentosDetalhados)} pagamento(s)`} color="text-emerald-500" trend="up"
           help="Soma apenas dos pagamentos classificados como recebidos: status aprovado ou pagamento com data de recebimento, sem contar cancelados, rejeitados, expirados ou estornados." />
@@ -587,23 +675,63 @@ export default function Dashboard() {
           sub={`${num(pagamentosEstornados)} pagamento(s) estornado(s)`}
           color="text-amber-500" trend={Number(pagamentosEstornados) > 0 ? "down" : "neutral"}
           help="Soma dos pagamentos cujo status financeiro é estornado. Esses valores não entram em Pagamentos Recebidos, mesmo que tenham data de pagamento registrada." />
+        {isStoreDashboard && (
+          <>
+            <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
+              sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
+              color="text-slate-500"
+              help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
+            <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
+              sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
+              color="text-amber-500"
+              help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
+          </>
+        )}
         <StatCard title="Cobrança da plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
           sub={`${num(splitResumo.quantidade_pedidos_cobrados)} de ${num(splitResumo.quantidade_pedidos_total)} pedido(s) - ${fmt(splitResumo.valor_bruto_total)} bruto`}
           color="text-indigo-500"
           help="Taxa líquida calculada pela fonte canônica financeira para pedidos elegíveis no período." />
-        <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
-          sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
-          color="text-emerald-500"
-          help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
-        <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
-          sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
-          color="text-orange-500"
-          help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
-        <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
-          sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
-          color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
-          help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
+        {!isStoreDashboard && (
+          <>
+            <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
+              sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
+              color="text-emerald-500"
+              help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
+            <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
+              sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
+              color="text-orange-500"
+              help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
+            <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
+              sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
+              color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
+              help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
+          </>
+        )}
       </div>
+
+      {isStoreDashboard && (
+        <>
+          <DashboardSection
+            title="Conciliação da plataforma"
+            description="Acompanhe o recebimento da taxa, valores pendentes e possíveis diferenças da loja."
+            icon={ShieldAlert}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
+              sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
+              color="text-emerald-500"
+              help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
+            <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
+              sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
+              color="text-orange-500"
+              help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
+            <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
+              sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
+              color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
+              help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
+          </div>
+        </>
+      )}
 
       {splitCategorias.length > 0 && (
         <Card>
@@ -616,7 +744,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {splitCategorias.map((category: any) => (
+              {splitCategorias.map((category) => (
                 <div key={category.categoria} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -663,7 +791,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {lojasFinanceiras.map((store: any) => (
+                {lojasFinanceiras.map((store) => (
                   <tr key={store.loja_id} className="border-b last:border-0">
                     <td className="px-3 py-3 font-medium">{store.loja_nome}</td>
                     <td className="px-3 py-3 text-right">{num(store.quantidade_pedidos)}</td>
@@ -695,15 +823,25 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
-          sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
-          color="text-slate-500"
-          help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
-        <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
-          sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
-          color="text-amber-500"
-          help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
+      <DashboardSection
+        title="Pagamentos por canal"
+        description="Compare onde os pagamentos foram realizados e como os valores estão distribuídos."
+        icon={DollarSign}
+      />
+
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isStoreDashboard ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
+        {!isStoreDashboard && (
+          <>
+            <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
+              sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
+              color="text-slate-500"
+              help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
+            <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
+              sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
+              color="text-amber-500"
+              help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
+          </>
+        )}
         <StatCard title="Recebido na Entrega" value={fmt(canalEntrega.valor_recebido)} icon={Truck}
           sub={`${num(canalEntrega.recebidos)} recebido(s) · ${fmt(canalEntrega.valor_total)} registrado(s)`}
           color="text-cyan-500"
@@ -775,6 +913,14 @@ export default function Dashboard() {
         </Card>
       )}
 
+      <DashboardSection
+        title="Indicadores de apoio"
+        description={isStoreDashboard
+          ? "Informações operacionais complementares para acompanhar a rotina da loja."
+          : "Informações operacionais complementares da plataforma."}
+        icon={Package}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MiniSummary icon={Truck} title="Entregas" color="text-teal-500" rows={[
           ["Total", num(m.entregas.total_entregas)],
@@ -794,7 +940,7 @@ export default function Dashboard() {
           ["Convertidos", num(m.carrinhos.carrinhos_convertidos)],
           ["Abandonados", num(m.carrinhos.carrinhos_abandonados)],
         ]} help="Resumo dos carrinhos registrados por status. Ativos ainda estão em aberto, convertidos viraram pedido e abandonados ficaram sem conclusão." />
-        <MiniSummary icon={Ticket} title="Cupons & Auditoria" color="text-pink-500" rows={[
+        <MiniSummary icon={Ticket} title="Cupons e auditoria" color="text-pink-500" rows={[
           ["Cupons ativos", num(r.cupons_ativos)],
           ["Usos de cupom", num(m.cupons.total_usos)],
           ["Logs auditoria", num(m.auditoria.total_logs)],
