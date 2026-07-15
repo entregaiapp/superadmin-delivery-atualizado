@@ -4,14 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { storeService } from "../../features/stores/storeService";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin, KeyRound, Palette, CalendarDays } from "lucide-react";
+import { ArrowLeft, Edit, Store, Mail, Phone, Hash, Clock, DollarSign, Truck, FileText, Image, Users, UtensilsCrossed, WalletCards, Puzzle, MapPin, KeyRound, Palette, CalendarDays, ClipboardList } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 import AdminsLoja from "./components/AdminsLoja";
 import RelatorioPagamentosEntrega from "./components/RelatorioPagamentosEntrega";
+import StoreActivities from "./components/StoreActivities";
 import { formatBrasiliaDate } from "../../lib/dateTime";
 
-type StoreTab = "dados" | "usuarios" | "financeiro" | "modulos";
+type StoreTab = "dados" | "usuarios" | "financeiro" | "modulos" | "atividades";
 type StoreModuleView = {
   slug: string;
   nome?: string;
@@ -62,6 +63,7 @@ export default function StoreDetails() {
     { id: "usuarios", label: "Usuários", icon: Users },
     { id: "financeiro", label: "Financeiro", icon: WalletCards },
     { id: "modulos", label: "Módulos", icon: Puzzle },
+    { id: "atividades", label: "Atividades", icon: ClipboardList },
   ];
 
   const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
@@ -86,7 +88,7 @@ export default function StoreDetails() {
   );
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/stores">
@@ -478,6 +480,13 @@ export default function StoreDetails() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {activeTab === "atividades" && (
+        <StoreActivities
+          storeId={store.id}
+          moduleEnabled={moduleList.some((module) => module.slug === "auditoria_operacional" && module.enabled === true)}
+        />
       )}
     </div>
   );
