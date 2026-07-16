@@ -275,6 +275,7 @@ export default function Dashboard() {
   const hasAlerts = data.alertas.origem_desconhecida !== 0
     || data.alertas.canal_indefinido !== 0
     || data.alertas.metodo_indefinido !== 0
+    || data.alertas.fiado_sem_origem !== 0
     || data.alertas.lojas_sem_regra.length > 0
     || data.alertas.diferenca_conciliacao !== 0;
 
@@ -396,7 +397,7 @@ export default function Dashboard() {
 
       <SectionTitle title="Resumo financeiro" description="Entradas, pendências e ajustes do período pesquisado." icon={CircleDollarSign} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Efetivamente recebido" value={summary.total_efetivamente_recebido} description="Pagamentos recebidos mais baixas de fiado." icon={CheckCircle2} color="text-emerald-600" />
+        <MetricCard title="Efetivamente recebido" value={summary.total_efetivamente_recebido} description="Pagamentos e baixas de fiado que atendem a todos os filtros." icon={CheckCircle2} color="text-emerald-600" />
         <MetricCard title="Recebido em pagamentos" value={summary.valor_recebido} description="Valores recebidos nos pagamentos vinculados ao período." icon={DollarSign} color="text-green-600" />
         <MetricCard title="Líquido recebido" value={summary.valor_liquido_recebido} description="Recebido após as taxas do gateway." icon={Landmark} color="text-cyan-600" />
         <MetricCard title="Pendente" value={summary.valor_pendente} description="Valores registrados que ainda aguardam recebimento." icon={Clock3} color="text-amber-600" />
@@ -434,6 +435,7 @@ export default function Dashboard() {
                 <Bar dataKey="admin" name="Painel administrativo" stackId="recebimentos" fill="#2563eb" />
                 <Bar dataKey="salao" name="Salão" stackId="recebimentos" fill="#d97706" />
                 <Bar dataKey="desconhecido" name="Desconhecido" stackId="recebimentos" fill="#dc2626" />
+                <Bar dataKey="fiado" name="Baixas de fiado" stackId="recebimentos" fill="#059669" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -509,7 +511,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <SectionTitle title="Fiado" description="Crédito registrado e valores efetivamente recebidos em baixas posteriores." icon={Landmark} />
+      <SectionTitle title="Fiado" description="Crédito conforme os pedidos; baixas entram pela data do pagamento e seguem a origem dos pedidos aos quais foram alocadas." icon={Landmark} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Fiado lançado" value={data.fiado.valor_lancado} description="Valor registrado como crédito no período." icon={Landmark} color="text-violet-600" />
         <MetricCard title="Saldo pendente" value={data.fiado.saldo_pendente} description="Valor de fiado ainda tratado separadamente das entradas." icon={Clock3} color="text-amber-600" />
@@ -538,6 +540,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
             {data.alertas.origem_desconhecida !== 0 && <div className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="text-muted-foreground">Origem desconhecida</p><p className="mt-1 font-bold">{money(data.alertas.origem_desconhecida)}</p></div>}
+            {data.alertas.fiado_sem_origem !== 0 && <div className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="text-muted-foreground">Baixas de fiado sem origem</p><p className="mt-1 font-bold">{money(data.alertas.fiado_sem_origem)}</p></div>}
             {data.alertas.lojas_sem_regra.map((item) => <div key={item.loja_id} className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="font-medium">{item.loja_nome}</p><p className="text-xs text-muted-foreground">Sem regra ativa · {money(item.valor_registrado)}</p></div>)}
             {data.alertas.diferenca_conciliacao !== 0 && <div className="rounded-lg border border-red-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="text-muted-foreground">Diferença de conciliação</p><p className="mt-1 font-bold text-red-600">{money(data.alertas.diferenca_conciliacao)}</p></div>}
           </CardContent>

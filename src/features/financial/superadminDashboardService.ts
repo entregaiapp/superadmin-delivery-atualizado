@@ -106,12 +106,14 @@ export type FinancialDashboard = {
     valor_lancado: number;
     saldo_pendente: number;
     valor_recebido: number;
+    valor_sem_origem: number;
     recebimentos_por_metodo: Array<{ payment_method: PaymentMethod; valor_recebido: number }>;
   };
   alertas: {
     origem_desconhecida: number;
     canal_indefinido: number;
     metodo_indefinido: number;
+    fiado_sem_origem: number;
     lojas_sem_regra: Array<{ loja_id: string; loja_nome: string; valor_registrado: number }>;
     diferenca_conciliacao: number;
   };
