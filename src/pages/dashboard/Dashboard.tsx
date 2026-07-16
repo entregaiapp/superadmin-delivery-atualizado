@@ -2,459 +2,264 @@ import { useMemo, useState, type ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Box,
+  CalendarDays,
   CheckCircle2,
-  Clock,
+  CircleDollarSign,
+  Clock3,
   CreditCard,
   DollarSign,
-  Info,
+  HandCoins,
+  Landmark,
   Loader2,
-  Package,
   RefreshCw,
   Search,
-  ShieldAlert,
+  ShieldCheck,
   SlidersHorizontal,
-  Smile,
-  ShoppingCart,
   Store,
-  Ticket,
-  TrendingUp,
-  Truck,
-  UserCheck,
-  Users,
+  Utensils,
+  WalletCards,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useMetricas } from "../../hooks/useMetricas";
-import { storeService, type Store as StoreType } from "../../features/stores/storeService";
-import { api } from "../../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "../../components/ui/button";
-import { Label } from "../../components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { storeService, type Store as StoreType } from "../../features/stores/storeService";
+import {
+  superadminDashboardService,
+  type CaptureChannel,
+  type ChannelMatrixRow,
+  type DashboardFilters,
+  type FinancialStatus,
+  type LabeledMoneyBucket,
+  type OrderSource,
+  type PaymentMethod,
+} from "../../features/financial/superadminDashboardService";
 import { dateInputInBrasilia, formatBrasiliaDate } from "../../lib/dateTime";
 
-function fmt(v: number | string | undefined | null) {
-  if (v === undefined || v === null) return "R$ 0,00";
-  return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const controlClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
+const sourceOptions: Array<{ key: OrderSource; label: string; icon: ElementType; color: string }> = [
+  { key: "CUSTOMER_APP", label: "App do cliente", icon: CreditCard, color: "text-violet-600" },
+  { key: "ADMIN", label: "Painel administrativo", icon: Store, color: "text-blue-600" },
+  { key: "SALON", label: "Salão", icon: Utensils, color: "text-amber-600" },
+  { key: "UNKNOWN", label: "Origem desconhecida", icon: AlertTriangle, color: "text-red-600" },
+];
+
+const captureLabels: Record<string, string> = {
+  ONLINE_GATEWAY: "Online",
+  EXTERNAL_OR_OFFLINE: "Offline",
+  CREDIT_TAB: "Fiado",
+};
+
+const methodLabels: Record<string, string> = {
+  PIX: "Pix",
+  CARD: "Cartão",
+  CASH: "Dinheiro",
+  CREDIT_TAB: "Fiado",
+};
+
+const statusLabels: Record<string, string> = {
+  RECEIVED: "Recebido",
+  PENDING: "Pendente",
+  REFUNDED: "Estornado",
+  CANCELED: "Cancelado",
+  REJECTED: "Rejeitado",
+  EXPIRED: "Expirado",
+  UNDEFINED: "Indefinido",
+};
+
+function money(value: number | string | null | undefined) {
+  return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function num(v: number | string | undefined | null) {
-  if (v === undefined || v === null) return "0";
-  return Number(v).toLocaleString("pt-BR");
-}
-
-function labelMetodoPagamento(value: string | undefined | null) {
-  const labels: Record<string, string> = {
-    dinheiro: "Dinheiro",
-    cartao: "Cartão",
-    pix: "PIX",
-    cartao_credito: "Cartão de crédito",
-    cartao_debito: "Cartão de débito",
-    card: "Cartão",
-    cash: "Dinheiro",
-    fiado: "Fiado",
-    credit_tab: "Fiado",
-    outros: "Outros",
-  };
-  return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
-}
-
-function labelCanalPagamento(value: string | undefined | null) {
-  return value === "entrega" ? "Na entrega" : value === "app" ? "No app" : String(value || "Indefinido");
-}
-
-function labelSituacaoFinanceira(value: string | undefined | null) {
-  const labels: Record<string, string> = {
-    recebido: "Recebido",
-    previsto: "Previsto",
-    rejeitado: "Rejeitado",
-    cancelado: "Cancelado",
-    estornado: "Estornado",
-    expirado: "Expirado",
-    indefinido: "Indefinido",
-  };
-  return labels[String(value || "").toLowerCase()] || String(value || "Indefinido");
-}
-
-type PaymentMethodSummary = {
-  metodo_pagamento?: string | null;
-  valor_recebido?: number | string;
-  valor_previsto_receber?: number | string;
-};
-
-type PaymentChannelSummary = {
-  canal_pagamento?: string | null;
-  quantidade?: number | string;
-  valor_total?: number | string;
-  valor_recebido?: number | string;
-  valor_previsto_receber?: number | string;
-  recebidos?: number | string;
-  previstos?: number | string;
-};
-
-type PaymentStatusSummary = {
-  situacao_financeira?: string | null;
-  pagamento_status?: string | null;
-  valor_total?: number | string;
-  quantidade?: number | string;
-};
-
-type PaymentMethodChannelSummary = {
-  metodo_pagamento?: string | null;
-  canal_pagamento?: string | null;
-  situacao_financeira?: string | null;
-  quantidade?: number | string;
-  valor_total?: number | string;
-  valor_liquido?: number | string;
-  taxas_gateway?: number | string;
-};
-
-type StoreExperienceSummary = {
-  id: string;
-  nome: string;
-  total_avaliacoes?: number | string;
-  nota_media?: number | string;
-  otimo?: number | string;
-  bom?: number | string;
-  ruim?: number | string;
-};
-
-type CanonicalStoreFinancial = {
-  loja_id: string;
-  loja_nome: string;
-  quantidade_pedidos?: number | string;
-  valor_bruto_pedidos_validos?: number | string;
-  base_elegivel?: number | string;
-  taxa_liquida?: number | string;
-  taxa_recebida_via_split?: number | string;
-  taxa_pendente_liquidacao?: number | string;
-  taxa_a_cobrar_estabelecimento?: number | string;
-  diferenca_conciliacao?: number | string;
-  status?: string;
-};
-
-type CanonicalFinancialResponse = {
-  resumo?: {
-    quantidade_pedidos?: number | string;
-    valor_bruto_pedidos_validos?: number | string;
-    taxa_liquida?: number | string;
-    taxa_recebida_via_split?: number | string;
-    taxa_pendente_liquidacao?: number | string;
-    taxa_a_cobrar_estabelecimento?: number | string;
-    diferenca_conciliacao?: number | string;
-  };
-  lojas?: CanonicalStoreFinancial[];
-};
-
-type SplitCategorySummary = {
-  categoria: string;
-  label?: string;
-  quantidade_pedidos?: number | string;
-  quantidade_cobrada?: number | string;
-  valor_bruto?: number | string;
-  valor_cobranca?: number | string;
-};
-
-type SpecificPaymentSearch = {
-  situacao: string;
-  canal: string;
-  metodo: string;
-};
-
-type SpecificPaymentResult = {
-  quantidade: number;
-  valorTotal: number;
-  valorLiquido: number;
-  taxasGateway: number;
-};
-
-const filterControlClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
-
-function formatDateLabel(value: string) {
+function dateLabel(value: string) {
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}/${month}/${year}` : value;
 }
 
-function matchesPaymentMethod(value: string | undefined | null, filter: string) {
-  if (!filter) return true;
-  const method = String(value || "").toLowerCase();
-  if (filter === "cartao") return method === "card" || method.startsWith("cartao");
-  if (filter === "dinheiro") return method === "dinheiro" || method === "cash";
-  if (filter === "fiado") return method === "fiado" || method === "credit_tab";
-  return method === filter;
-}
-
-function MetricHelp({ text }: { text: string }) {
-  return (
-    <span className="relative inline-flex shrink-0 items-center">
-      <button
-        type="button"
-        className="group/help inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={text}
-      >
-        <Info className="h-3.5 w-3.5" />
-        <span
-          role="tooltip"
-          className="pointer-events-none absolute right-0 top-6 z-50 hidden w-72 rounded-md border bg-popover px-3 py-2 text-left text-xs font-normal leading-5 text-popover-foreground shadow-lg group-hover/help:block group-focus-visible/help:block"
-        >
-          {text}
-        </span>
-      </button>
-    </span>
-  );
-}
-
-function StatCard({ title, value, icon: Icon, sub, color = "text-primary", trend, help }: {
+function MetricCard({ title, value, description, icon: Icon, color = "text-slate-700" }: {
   title: string;
-  value: string;
+  value: number;
+  description: string;
   icon: ElementType;
-  sub?: string;
   color?: string;
-  trend?: "up" | "down" | "neutral";
-  help: string;
 }) {
   return (
-    <Card className="relative flex h-full min-h-[140px] flex-col overflow-visible group hover:shadow-lg transition-shadow duration-300">
-      <div className={`absolute inset-0 opacity-[0.03] ${color.replace("text-", "bg-")}`} />
-      <CardHeader className="relative flex min-h-[64px] flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <CardTitle className="flex items-start gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
-          <span>{title}</span>
-          <MetricHelp text={help} />
-        </CardTitle>
-        <div className={`shrink-0 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 ${color}`} aria-hidden="true">
-          <Icon className="h-4 w-4" />
+    <Card className="h-full border-slate-200 shadow-sm dark:border-slate-800">
+      <CardContent className="flex h-full min-h-32 flex-col justify-between p-4">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <div className="rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
+            <Icon className={`h-4 w-4 ${color}`} aria-hidden="true" />
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="relative flex flex-1 flex-col justify-end">
-        <div className="text-2xl font-bold tracking-tight">{value}</div>
-        {sub && (
-          <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1 leading-4">
-            {trend === "up" && <ArrowUpRight className="h-3 w-3 text-emerald-500" />}
-            {trend === "down" && <ArrowDownRight className="h-3 w-3 text-red-500" />}
-            <span>{sub}</span>
-          </p>
-        )}
+        <div className="mt-4">
+          <p className="text-xl font-bold tracking-tight">{money(value)}</p>
+          <p className="mt-1 text-xs leading-4 text-muted-foreground">{description}</p>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function DashboardSection({
-  title,
-  description,
-  icon: Icon,
-}: {
-  title: string;
-  description: string;
-  icon: ElementType;
-}) {
+function SectionTitle({ title, description, icon: Icon }: { title: string; description: string; icon: ElementType }) {
   return (
     <div className="flex items-start gap-3 pt-1">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
       <div>
-        <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+        <h3 className="font-semibold tracking-tight">{title}</h3>
         <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   );
 }
 
-// A API ainda retorna dois formatos diferentes para plataforma e loja; este adaptador centraliza essa compatibilidade.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeDashboard(m: any) {
-  if (m?.resumo) {
-    return {
-      scope: "platform" as const,
-      resumo: m.resumo,
-      pedidos: m.pedidos.metricas,
-      financeiro: m.financeiro,
-      entregas: m.entregas,
-      estoque: m.estoque,
-      carrinhos: m.carrinhos,
-      cupons: m.cupons,
-      auditoria: m.auditoria,
-      experienciaCompra: m.experiencia_compra || { resumo: {}, por_loja: [] },
-      topLojas: (m.rankings?.top_lojas_faturamento || []).slice(0, 5).map((l: { nome?: string; faturamento?: number | string }) => {
-        const nome = l.nome || "Sem nome";
-        return {
-          nome: nome.length > 18 ? `${nome.slice(0, 18)}...` : nome,
-          faturamento: Number(l.faturamento),
-        };
-      }),
-      gerado_em: m.gerado_em,
-    };
-  }
+function OriginCard({ option, bucket }: { option: typeof sourceOptions[number]; bucket?: LabeledMoneyBucket }) {
+  const Icon = option.icon;
+  return (
+    <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Icon className={`h-4 w-4 ${option.color}`} aria-hidden="true" />
+          {option.label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        <ValueRow label="Recebido" value={bucket?.valor_recebido} strong />
+        <ValueRow label="Líquido" value={bucket?.valor_liquido_recebido} />
+        <ValueRow label="Pendente" value={bucket?.valor_pendente} />
+        <ValueRow label="Estornado" value={bucket?.valor_estornado} />
+        <ValueRow label="Registrado" value={bucket?.valor_registrado} />
+      </CardContent>
+    </Card>
+  );
+}
 
-  return {
-    scope: "store" as const,
-    loja: m.loja,
-    resumo: {
-      total_lojas: 1,
-      lojas_ativas: m.loja?.status === "ativa" ? 1 : 0,
-      lojas_inativas: m.loja?.status === "inativa" ? 1 : 0,
-      total_clientes: m.novosClientes,
-      clientes_ativos: m.novosClientes,
-      clientes_bloqueados: 0,
-      total_usuarios: m.contagens?.total_usuarios,
-      usuarios_ativos: m.contagens?.total_usuarios,
-      total_users_sistema: 0,
-      total_produtos: m.contagens?.total_produtos,
-      produtos_ativos: m.contagens?.produtos_ativos,
-      total_categorias: m.contagens?.total_categorias,
-      total_entregadores: m.contagens?.total_entregadores,
-      entregadores_ativos: m.contagens?.total_entregadores,
-      total_cupons: m.contagens?.total_cupons,
-      cupons_ativos: m.contagens?.total_cupons,
-    },
-    pedidos: {
-      total_pedidos: m.pedidos?.total_pedidos,
-      pedidos_pendentes: m.pedidos?.pendentes,
-      pedidos_confirmados: m.pedidos?.confirmados,
-      pedidos_em_separacao: m.pedidos?.em_separacao,
-      pedidos_prontos: m.pedidos?.prontos,
-      pedidos_saiu_entrega: m.pedidos?.em_rota,
-      pedidos_entregues: m.pedidos?.entregues,
-      pedidos_cancelados: m.pedidos?.cancelados,
-      valor_total_pedidos: m.pedidos?.valor_total,
-      valor_pedidos_entregues: m.pedidos?.faturamento,
-      total_descontos_aplicados: 0,
-      total_taxas_entrega: 0,
-      ticket_medio: m.pedidos?.ticket_medio,
-    },
-    financeiro: {
-      pagamentos: {
-        total_pagamentos: m.pagamentos?.total_pagamentos,
-        pagamentos_aprovados: m.pagamentos?.aprovados,
-        pagamentos_pendentes: 0,
-        pagamentos_rejeitados: 0,
-        pagamentos_estornados: 0,
-        pagamentos_cancelados: 0,
-        valor_total_aprovado: m.pagamentos?.valor_aprovado,
-        total_taxas_gateway: m.pagamentos?.total_taxas_gateway,
-        valor_liquido_total: Number(m.pagamentos?.valor_aprovado || 0) - Number(m.pagamentos?.total_taxas_gateway || 0),
-      },
-      pagamentos_detalhados: m.financeiro?.pagamentos_detalhados || m.pagamentos_detalhados || {
-        resumo: {},
-        por_forma_pagamento: [],
-        por_canal_pagamento: [],
-        por_forma_e_canal: [],
-        por_status: [],
-        recentes: [],
-      },
-      estornos: { total_estornos: 0, estornos_aprovados: 0, estornos_pendentes: 0, valor_total_estornado: 0 },
-      splits: { total_splits: 0, splits_transferidos: 0, splits_pendentes: 0, splits_falharam: 0, valor_bruto_transferido: 0, valor_liquido_transferido: 0 },
-      splits_apurados: m.financeiro?.splits_apurados || {
-        resumo: {
-          quantidade_pedidos_total: 0,
-          quantidade_pedidos_cobrados: 0,
-          valor_bruto_total: 0,
-          valor_final_cobranca: 0,
-        },
-        categorias: [],
-        pedidos_recentes: [],
-      },
-      webhooks: { total_notificacoes: 0, processadas: 0, nao_processadas: 0, com_erro: 0 },
-    },
-    entregas: { total_entregas: 0, entregas_aguardando: 0, entregas_atribuidas: 0, entregas_em_andamento: 0, entregas_concluidas: 0, entregas_falharam: 0 },
-    estoque: {
-      total_registros_estoque: m.estoque?.total_registros,
-      produtos_estoque_baixo: m.estoque?.estoque_baixo,
-      produtos_sem_estoque: m.estoque?.sem_estoque,
-      total_quantidade_reservada: 0,
-    },
-    carrinhos: { total_carrinhos: 0, carrinhos_ativos: 0, carrinhos_convertidos: 0, carrinhos_abandonados: 0 },
-    cupons: { total_usos: 0 },
-    auditoria: { total_logs: 0 },
-    experienciaCompra: m.experiencia_compra || { resumo: {}, por_loja: [] },
-    topLojas: [],
-    gerado_em: m.gerado_em,
-  };
+function ValueRow({ label, value, strong = false }: { label: string; value?: number; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={strong ? "font-bold text-foreground" : "font-medium"}>{money(value)}</span>
+    </div>
+  );
+}
+
+function ChannelTable({ title, rows }: { title: string; rows: ChannelMatrixRow[] }) {
+  return (
+    <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        {rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Nenhum valor encontrado para esta origem.
+          </div>
+        ) : (
+          <table className="w-full min-w-[680px] text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                <th className="py-2 pr-3">Canal</th>
+                <th className="py-2 pr-3">Forma</th>
+                <th className="px-3 py-2 text-right">Recebido</th>
+                <th className="px-3 py-2 text-right">Pendente</th>
+                <th className="px-3 py-2 text-right">Estornado</th>
+                <th className="py-2 pl-3 text-right">Líquido</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`${row.payment_capture_channel}-${row.payment_method}`} className="border-b last:border-0">
+                  <td className="py-3 pr-3 font-medium">{captureLabels[row.payment_capture_channel] || row.payment_capture_channel}</td>
+                  <td className="py-3 pr-3 text-muted-foreground">{methodLabels[row.payment_method] || row.payment_method}</td>
+                  <td className="px-3 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400">{money(row.valor_recebido)}</td>
+                  <td className="px-3 py-3 text-right">{money(row.valor_pendente)}</td>
+                  <td className="px-3 py-3 text-right">{money(row.valor_estornado)}</td>
+                  <td className="py-3 pl-3 text-right">{money(row.valor_liquido_recebido)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function makePeriod(preset: string) {
+  const end = new Date();
+  const start = new Date(end);
+  if (preset === "ontem") {
+    start.setDate(start.getDate() - 1);
+    end.setDate(end.getDate() - 1);
+  } else {
+    const days = preset === "7dias" ? 6 : preset === "90dias" ? 89 : preset === "30dias" ? 29 : 0;
+    start.setDate(start.getDate() - days);
+  }
+  return { dataInicio: dateInputInBrasilia(start), dataFim: dateInputInBrasilia(end) };
 }
 
 export default function Dashboard() {
-  const [{ today, thirtyDaysAgo }] = useState(() => {
-    const now = new Date();
-    return {
-      today: dateInputInBrasilia(now),
-      thirtyDaysAgo: dateInputInBrasilia(new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)),
-    };
-  });
-  const [dataInicio, setDataInicio] = useState(thirtyDaysAgo);
-  const [dataFim, setDataFim] = useState(today);
-  const [lojaId, setLojaId] = useState("");
-  const [periodoFiltro, setPeriodoFiltro] = useState("30dias");
-  const [dataInicioFiltro, setDataInicioFiltro] = useState(thirtyDaysAgo);
-  const [dataFimFiltro, setDataFimFiltro] = useState(today);
-  const [lojaIdFiltro, setLojaIdFiltro] = useState("");
-  const [situacaoFiltro, setSituacaoFiltro] = useState("recebido");
-  const [canalFiltro, setCanalFiltro] = useState("");
-  const [metodoFiltro, setMetodoFiltro] = useState("");
-  const [pesquisaEspecifica, setPesquisaEspecifica] = useState<SpecificPaymentSearch | null>(null);
+  const initialPeriod = useMemo(() => makePeriod("30dias"), []);
+  const [preset, setPreset] = useState("30dias");
+  const [draft, setDraft] = useState<DashboardFilters>({ ...initialPeriod, dateType: "payment" });
+  const [applied, setApplied] = useState<DashboardFilters>({ ...initialPeriod, dateType: "payment" });
 
-  const { data: storesData } = useQuery({
-    queryKey: ["stores", "dashboard-filter"],
+  const storesQuery = useQuery({
+    queryKey: ["stores", "financial-dashboard-filter"],
     queryFn: () => storeService.getAll(),
   });
-
-  const stores: StoreType[] = Array.isArray(storesData?.data?.data)
-    ? storesData.data.data
-    : Array.isArray(storesData?.data)
-      ? storesData.data
-      : Array.isArray(storesData)
-        ? storesData
+  const stores: StoreType[] = Array.isArray(storesQuery.data?.data?.data)
+    ? storesQuery.data.data.data
+    : Array.isArray(storesQuery.data?.data)
+      ? storesQuery.data.data
+      : Array.isArray(storesQuery.data)
+        ? storesQuery.data
         : [];
 
-  const filters = useMemo(() => ({
-    dataInicio: dataInicio || undefined,
-    dataFim: dataFim || undefined,
-    lojaId: lojaId || undefined,
-  }), [dataInicio, dataFim, lojaId]);
-
-  const { data, isLoading, error, refetch, isFetching } = useMetricas(filters);
-  const financeiroQuery = useQuery({
-    queryKey: ["financeiro-superadmin", dataInicio, dataFim, lojaId],
-    queryFn: async () => {
-      const { data: response } = await api.get("/financeiro/superadmin", {
-        params: {
-          dataInicio: dataInicio || undefined,
-          dataFim: dataFim || undefined,
-          loja_id: lojaId || undefined,
-          dateType: "order",
-        },
-      });
-      return response.data;
-    },
-    staleTime: 60 * 1000,
+  const dashboardQuery = useQuery({
+    queryKey: ["superadmin-financial-dashboard", applied],
+    queryFn: () => superadminDashboardService.get(applied),
+    staleTime: 60_000,
   });
-  const m = data ? normalizeDashboard(data) : null;
 
-  if (isLoading) {
+  const invalidPeriod = Boolean(draft.dataInicio && draft.dataFim && draft.dataInicio > draft.dataFim);
+
+  if (dashboardQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground text-sm">Carregando métricas...</p>
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-9 w-9 animate-spin text-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">Carregando visão financeira...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !m) {
+  if (dashboardQuery.error || !dashboardQuery.data) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <ShieldAlert className="h-12 w-12 text-red-500 mx-auto" />
-            <h2 className="text-lg font-semibold">Erro ao carregar métricas</h2>
-            <p className="text-sm text-muted-foreground">
-              {(error as Error)?.message || "Verifique se o backend está rodando."}
-            </p>
-            <Button onClick={() => refetch()} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" /> Tentar novamente
+      <div className="flex h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-lg">
+          <CardContent className="space-y-4 pt-6 text-center">
+            <AlertTriangle className="mx-auto h-11 w-11 text-red-500" />
+            <div>
+              <h2 className="font-semibold">Não foi possível carregar o dashboard financeiro</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{(dashboardQuery.error as Error)?.message || "Verifique a conexão com o backend."}</p>
+            </div>
+            <Button variant="outline" onClick={() => dashboardQuery.refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
             </Button>
           </CardContent>
         </Card>
@@ -462,791 +267,286 @@ export default function Dashboard() {
     );
   }
 
-  const r = m.resumo;
-  const ped = m.pedidos;
-  const fin = m.financeiro;
-  const pagamentosDetalhados = fin.pagamentos_detalhados || {};
-  const resumoPagamentos = pagamentosDetalhados.resumo || {};
-  const pagamentosPorForma = (pagamentosDetalhados.por_forma_pagamento || []) as PaymentMethodSummary[];
-  const pagamentosPorCanal = (pagamentosDetalhados.por_canal_pagamento || []) as PaymentChannelSummary[];
-  const pagamentosPorFormaCanal = (pagamentosDetalhados.por_forma_e_canal || []) as PaymentMethodChannelSummary[];
-  const pagamentosPorStatus = (pagamentosDetalhados.por_status || []) as PaymentStatusSummary[];
-  const linhasPesquisaEspecifica = pesquisaEspecifica
-    ? pagamentosPorFormaCanal.filter((item) => {
-        const matchesSituation = !pesquisaEspecifica.situacao
-          || String(item.situacao_financeira || "").toLowerCase() === pesquisaEspecifica.situacao;
-        const matchesChannel = !pesquisaEspecifica.canal
-          || (pesquisaEspecifica.canal === "offline"
-            ? item.canal_pagamento === "entrega"
-            : item.canal_pagamento === pesquisaEspecifica.canal);
-        return matchesSituation && matchesChannel && matchesPaymentMethod(item.metodo_pagamento, pesquisaEspecifica.metodo);
-      })
-    : [];
-  const resultadoPesquisaEspecifica = linhasPesquisaEspecifica.reduce<SpecificPaymentResult>(
-    (acc, item) => ({
-      quantidade: acc.quantidade + Number(item.quantidade || 0),
-      valorTotal: acc.valorTotal + Number(item.valor_total || 0),
-      valorLiquido: acc.valorLiquido + Number(item.valor_liquido || 0),
-      taxasGateway: acc.taxasGateway + Number(item.taxas_gateway || 0),
-    }),
-    { quantidade: 0, valorTotal: 0, valorLiquido: 0, taxasGateway: 0 },
-  );
-  const experiencia = m.experienciaCompra?.resumo || {};
-  const experienciaPorLoja = (m.experienciaCompra?.por_loja || []) as StoreExperienceSummary[];
-  const totalPagamentosDetalhados = resumoPagamentos.total_pagamentos ?? fin.pagamentos.total_pagamentos;
-  const pagamentosRecebidos = resumoPagamentos.pagamentos_recebidos ?? fin.pagamentos.pagamentos_aprovados;
-  const valorRecebido = resumoPagamentos.valor_recebido ?? fin.pagamentos.valor_total_aprovado;
-  const valorLiquidoRecebido = resumoPagamentos.valor_liquido_recebido ?? fin.pagamentos.valor_liquido_total;
-  const taxasGatewayRecebidas = resumoPagamentos.taxas_gateway_recebidas ?? fin.pagamentos.total_taxas_gateway;
-  const valorRegistrado = resumoPagamentos.valor_total_registrado ?? ped.valor_total_pedidos;
-  const pagamentosPrevistos = resumoPagamentos.pagamentos_previstos ?? fin.pagamentos.pagamentos_pendentes;
-  const valorPrevisto = resumoPagamentos.valor_previsto_receber ?? 0;
-  const pagamentosEstornados = resumoPagamentos.pagamentos_estornados ?? fin.estornos.estornos_aprovados;
-  const valorEstornado = resumoPagamentos.valor_estornado ?? fin.estornos.valor_total_estornado;
-  const resumoCanal = (canal: "entrega" | "app") =>
-    pagamentosPorCanal.find((item) => item.canal_pagamento === canal) || {
-      quantidade: 0,
-      valor_total: 0,
-      valor_recebido: 0,
-      valor_previsto_receber: 0,
-      recebidos: 0,
-      previstos: 0,
-    };
-  const canalEntrega = resumoCanal("entrega");
-  const canalApp = resumoCanal("app");
-  const financeiroCanonic = (financeiroQuery.data || null) as CanonicalFinancialResponse | null;
-  const splitApurado = financeiroCanonic
-    ? {
-        resumo: {
-          quantidade_pedidos_total: financeiroCanonic.resumo?.quantidade_pedidos || 0,
-          quantidade_pedidos_cobrados: financeiroCanonic.lojas?.reduce((sum, item) => sum + Number(item.quantidade_pedidos || 0), 0) || 0,
-          valor_bruto_total: financeiroCanonic.resumo?.valor_bruto_pedidos_validos || 0,
-          valor_final_cobranca: financeiroCanonic.resumo?.taxa_liquida || 0,
-          taxa_recebida_via_split: financeiroCanonic.resumo?.taxa_recebida_via_split || 0,
-          taxa_pendente_liquidacao: financeiroCanonic.resumo?.taxa_pendente_liquidacao || 0,
-          taxa_a_cobrar_estabelecimento: financeiroCanonic.resumo?.taxa_a_cobrar_estabelecimento || 0,
-          diferenca_conciliacao: financeiroCanonic.resumo?.diferenca_conciliacao || 0,
-        },
-        categorias: financeiroCanonic.lojas?.map((store) => ({
-          categoria: store.loja_id,
-          label: store.loja_nome,
-          quantidade_pedidos: store.quantidade_pedidos,
-          quantidade_cobrada: store.quantidade_pedidos,
-          valor_bruto: store.valor_bruto_pedidos_validos,
-          valor_cobranca: store.taxa_liquida,
-        })) || [],
-      }
-    : fin.splits_apurados || {
-    resumo: {
-      quantidade_pedidos_total: 0,
-      quantidade_pedidos_cobrados: 0,
-      valor_bruto_total: 0,
-      valor_final_cobranca: 0,
-    },
-    categorias: [],
-  };
-  const splitResumo = splitApurado.resumo || {};
-  const splitCategorias: SplitCategorySummary[] = Array.isArray(splitApurado.categorias) ? splitApurado.categorias : [];
-  const lojasFinanceiras: CanonicalStoreFinancial[] = Array.isArray(financeiroCanonic?.lojas) ? financeiroCanonic.lojas : [];
-  const isStoreDashboard = m.scope === "store";
-  const periodoInvalido = Boolean(dataInicioFiltro && dataFimFiltro && dataInicioFiltro > dataFimFiltro);
-  const lojaPesquisada = stores.find((store) => store.id === lojaId);
+  const data = dashboardQuery.data;
+  const summary = data.resumo;
+  const platform = data.taxa_plataforma.resumo;
+  const originMap = new Map(data.por_origem.map((item) => [item.key, item]));
+  const selectedStore = stores.find((store) => store.id === applied.lojaId);
+  const hasAlerts = data.alertas.origem_desconhecida !== 0
+    || data.alertas.canal_indefinido !== 0
+    || data.alertas.metodo_indefinido !== 0
+    || data.alertas.lojas_sem_regra.length > 0
+    || data.alertas.diferenca_conciliacao !== 0;
 
   return (
-    <div className="space-y-6">
-      <div className={`flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between ${
-        isStoreDashboard
-          ? "rounded-xl bg-slate-900 p-5 text-white shadow-sm dark:bg-slate-950"
-          : ""
-      }`}>
-        <div>
-          {isStoreDashboard && (
-            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-300">Visão da loja</p>
-          )}
-          <h2 className="text-2xl font-bold tracking-tight">
-            {isStoreDashboard ? m.loja?.nome || "Loja selecionada" : "Visão Geral da Plataforma"}
-          </h2>
-          <p className={`mt-1 text-sm ${isStoreDashboard ? "text-slate-300" : "text-muted-foreground"}`}>
-            Atualizado em {m.gerado_em ? formatBrasiliaDate(m.gerado_em, { dateStyle: "short", timeStyle: "short" }) : "-"}
-          </p>
-        </div>
-
-        <div className={`rounded-lg px-3 py-2 text-sm ${isStoreDashboard ? "bg-white/10 text-slate-200" : "border bg-muted/40 text-muted-foreground"}`}>
-          <p className="text-xs">Período consultado</p>
-          <p className={`mt-0.5 font-medium ${isStoreDashboard ? "text-white" : "text-foreground"}`}>
-            {formatDateLabel(dataInicio)} a {formatDateLabel(dataFim)}
-          </p>
+    <div className="space-y-6 pb-10">
+      <div className="rounded-xl bg-slate-900 p-5 text-white shadow-sm dark:bg-slate-950">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-300">Financeiro da plataforma</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight">Visão geral por canais de pagamento</h2>
+            <p className="mt-1 text-sm text-slate-300">
+              Valores consolidados de {selectedStore?.nome || "todas as lojas"}, sem exibição de pedidos individuais.
+            </p>
+          </div>
+          <div className="rounded-lg bg-white/10 px-4 py-3 text-sm">
+            <p className="text-xs text-slate-300">Período consultado</p>
+            <p className="mt-0.5 font-semibold">{dateLabel(applied.dataInicio)} a {dateLabel(applied.dataFim)}</p>
+            <p className="mt-1 text-xs text-slate-300">
+              Referência: {applied.dateType === "order" ? "data do pedido" : "data do pagamento"}
+            </p>
+          </div>
         </div>
       </div>
 
       <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-800">
         <CardHeader className="border-b bg-slate-50/80 pb-4 dark:bg-slate-900/50">
           <CardTitle className="flex items-center gap-2 text-base">
-            <SlidersHorizontal className="h-4 w-4 text-primary" aria-hidden="true" />
-            Pesquisa de valor específico
+            <SlidersHorizontal className="h-4 w-4 text-primary" /> Filtros da consulta
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Combine os filtros para localizar um valor financeiro específico no dashboard.
-          </p>
         </CardHeader>
         <CardContent className="pt-5">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-1.5">
-              <Label htmlFor="periodoFiltro">Período</Label>
-              <select
-                id="periodoFiltro"
-                value={periodoFiltro}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setPeriodoFiltro(value);
-                  if (value === "personalizado") return;
-
-                  const end = new Date();
-                  const start = new Date(end);
-                  if (value === "ontem") {
-                    start.setDate(start.getDate() - 1);
-                    end.setDate(end.getDate() - 1);
-                  } else {
-                    const days = value === "7dias" ? 6 : value === "90dias" ? 89 : value === "30dias" ? 29 : 0;
-                    start.setDate(start.getDate() - days);
-                  }
-                  setDataInicioFiltro(dateInputInBrasilia(start));
-                  setDataFimFiltro(dateInputInBrasilia(end));
-                }}
-                className={filterControlClass}
-              >
+              <Label htmlFor="preset">Período rápido</Label>
+              <select id="preset" value={preset} className={controlClass} onChange={(event) => {
+                const value = event.target.value;
+                setPreset(value);
+                if (value !== "personalizado") setDraft((current) => ({ ...current, ...makePeriod(value) }));
+              }}>
                 <option value="hoje">Hoje</option>
                 <option value="ontem">Ontem</option>
                 <option value="7dias">Últimos 7 dias</option>
                 <option value="30dias">Últimos 30 dias</option>
                 <option value="90dias">Últimos 90 dias</option>
-                <option value="personalizado">Período personalizado</option>
+                <option value="personalizado">Personalizado</option>
               </select>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="dataInicioFiltro">Data inicial</Label>
-              <Input
-                id="dataInicioFiltro"
-                type="date"
-                value={dataInicioFiltro}
-                onChange={(event) => {
-                  setPeriodoFiltro("personalizado");
-                  setDataInicioFiltro(event.target.value);
-                }}
-              />
+              <Label htmlFor="dataInicio">Data inicial</Label>
+              <Input id="dataInicio" type="date" value={draft.dataInicio} onChange={(event) => {
+                setPreset("personalizado");
+                setDraft((current) => ({ ...current, dataInicio: event.target.value }));
+              }} />
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="dataFimFiltro">Data final</Label>
-              <Input
-                id="dataFimFiltro"
-                type="date"
-                value={dataFimFiltro}
-                onChange={(event) => {
-                  setPeriodoFiltro("personalizado");
-                  setDataFimFiltro(event.target.value);
-                }}
-              />
+              <Label htmlFor="dataFim">Data final</Label>
+              <Input id="dataFim" type="date" value={draft.dataFim} onChange={(event) => {
+                setPreset("personalizado");
+                setDraft((current) => ({ ...current, dataFim: event.target.value }));
+              }} />
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="lojaIdFiltro">Loja</Label>
-              <select id="lojaIdFiltro" value={lojaIdFiltro} onChange={(event) => setLojaIdFiltro(event.target.value)} className={filterControlClass}>
+              <Label htmlFor="dateType">Referência das datas</Label>
+              <select id="dateType" className={controlClass} value={draft.dateType} onChange={(event) => setDraft((current) => ({ ...current, dateType: event.target.value as "payment" | "order" }))}>
+                <option value="payment">Data do pagamento</option>
+                <option value="order">Data do pedido</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="store">Loja</Label>
+              <select id="store" className={controlClass} value={draft.lojaId || ""} onChange={(event) => setDraft((current) => ({ ...current, lojaId: event.target.value }))}>
                 <option value="">Todas as lojas</option>
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>{store.nome}</option>
-                ))}
+                {stores.map((store) => <option key={store.id} value={store.id}>{store.nome}</option>)}
               </select>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="situacaoFiltro">Situação do pagamento</Label>
-              <select id="situacaoFiltro" value={situacaoFiltro} onChange={(event) => setSituacaoFiltro(event.target.value)} className={filterControlClass}>
-                <option value="">Todas as situações</option>
-                <option value="recebido">Pagamentos recebidos</option>
-                <option value="previsto">Pagamentos previstos</option>
-                <option value="estornado">Pagamentos estornados</option>
-                <option value="rejeitado">Pagamentos rejeitados</option>
-                <option value="cancelado">Pagamentos cancelados</option>
-                <option value="expirado">Pagamentos expirados</option>
+              <Label htmlFor="source">Origem</Label>
+              <select id="source" className={controlClass} value={draft.orderSource || ""} onChange={(event) => setDraft((current) => ({ ...current, orderSource: event.target.value as OrderSource | "" }))}>
+                <option value="">Todas as origens</option>
+                {sourceOptions.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
               </select>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="canalFiltro">Canal do pagamento</Label>
-              <select id="canalFiltro" value={canalFiltro} onChange={(event) => setCanalFiltro(event.target.value)} className={filterControlClass}>
+              <Label htmlFor="capture">Canal de captura</Label>
+              <select id="capture" className={controlClass} value={draft.captureChannel || ""} onChange={(event) => setDraft((current) => ({ ...current, captureChannel: event.target.value as CaptureChannel | "" }))}>
                 <option value="">Todos os canais</option>
-                <option value="app">Pagamentos no app</option>
-                <option value="offline">Pagamentos offline/na entrega</option>
+                <option value="ONLINE_GATEWAY">Online</option>
+                <option value="EXTERNAL_OR_OFFLINE">Offline</option>
+                <option value="CREDIT_TAB">Fiado</option>
               </select>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="metodoFiltro">Forma de pagamento</Label>
-              <select id="metodoFiltro" value={metodoFiltro} onChange={(event) => setMetodoFiltro(event.target.value)} className={filterControlClass}>
+              <Label htmlFor="method">Forma de pagamento</Label>
+              <select id="method" className={controlClass} value={draft.paymentMethod || ""} onChange={(event) => setDraft((current) => ({ ...current, paymentMethod: event.target.value as PaymentMethod | "" }))}>
                 <option value="">Todas as formas</option>
-                <option value="dinheiro">Dinheiro</option>
-                <option value="cartao">Cartão de crédito ou débito</option>
-                <option value="pix">PIX</option>
-                <option value="fiado">Fiado</option>
-                <option value="outros">Outros</option>
+                <option value="PIX">Pix</option>
+                <option value="CARD">Cartão</option>
+                <option value="CASH">Dinheiro</option>
+                <option value="CREDIT_TAB">Fiado</option>
               </select>
             </div>
-
-            <div className="flex items-end">
-              <Button
-                className="w-full"
-                onClick={() => {
-                  const sameQuery = dataInicio === dataInicioFiltro && dataFim === dataFimFiltro && lojaId === lojaIdFiltro;
-                  setDataInicio(dataInicioFiltro);
-                  setDataFim(dataFimFiltro);
-                  setLojaId(lojaIdFiltro);
-                  setPesquisaEspecifica({ situacao: situacaoFiltro, canal: canalFiltro, metodo: metodoFiltro });
-                  if (sameQuery) {
-                    void refetch();
-                    void financeiroQuery.refetch();
-                  }
-                }}
-                disabled={periodoInvalido || isFetching || financeiroQuery.isFetching}
-              >
-                {isFetching || financeiroQuery.isFetching
-                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  : <Search className="mr-2 h-4 w-4" />}
-                Pesquisar valor específico
+            <div className="space-y-1.5">
+              <Label htmlFor="status">Situação financeira</Label>
+              <select id="status" className={controlClass} value={draft.financialStatus || ""} onChange={(event) => setDraft((current) => ({ ...current, financialStatus: event.target.value as FinancialStatus | "" }))}>
+                <option value="">Todas as situações</option>
+                {Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end sm:col-span-2 xl:col-span-3">
+              <Button className="w-full sm:w-auto" disabled={invalidPeriod || dashboardQuery.isFetching} onClick={() => setApplied({ ...draft })}>
+                {dashboardQuery.isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                Consultar valores
               </Button>
             </div>
           </div>
+          {invalidPeriod && <p className="mt-3 text-sm font-medium text-red-600">A data inicial não pode ser posterior à data final.</p>}
+        </CardContent>
+      </Card>
 
-          {periodoInvalido && (
-            <p className="mt-3 text-sm font-medium text-red-600">A data inicial não pode ser posterior à data final.</p>
+      <SectionTitle title="Resumo financeiro" description="Entradas, pendências e ajustes do período pesquisado." icon={CircleDollarSign} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard title="Efetivamente recebido" value={summary.total_efetivamente_recebido} description="Pagamentos recebidos mais baixas de fiado." icon={CheckCircle2} color="text-emerald-600" />
+        <MetricCard title="Recebido em pagamentos" value={summary.valor_recebido} description="Valores recebidos nos pagamentos vinculados ao período." icon={DollarSign} color="text-green-600" />
+        <MetricCard title="Líquido recebido" value={summary.valor_liquido_recebido} description="Recebido após as taxas do gateway." icon={Landmark} color="text-cyan-600" />
+        <MetricCard title="Pendente" value={summary.valor_pendente} description="Valores registrados que ainda aguardam recebimento." icon={Clock3} color="text-amber-600" />
+        <MetricCard title="Total registrado" value={summary.valor_registrado} description="Todos os pagamentos, independentemente da situação." icon={WalletCards} color="text-slate-600" />
+        <MetricCard title="Taxas do gateway" value={summary.taxas_gateway} description="Custos dos meios de pagamento online recebidos." icon={CreditCard} color="text-violet-600" />
+        <MetricCard title="Estornado" value={summary.valor_estornado} description="Valores devolvidos ou marcados como estornados." icon={RefreshCw} color="text-orange-600" />
+        <MetricCard title="Cancelado ou rejeitado" value={summary.valor_cancelado + summary.valor_rejeitado + summary.valor_expirado} description="Valores que não representam entrada financeira." icon={AlertTriangle} color="text-red-600" />
+      </div>
+
+      <SectionTitle title="Entradas por origem" description="Valores originados no app do cliente, no painel administrativo e no salão." icon={WalletCards} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {sourceOptions.map((option) => <OriginCard key={option.key} option={option} bucket={originMap.get(option.key)} />)}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <ChannelTable title="App do cliente" rows={data.matriz_canais.filter((row) => row.order_source === "CUSTOMER_APP")} />
+        <ChannelTable title="Painel administrativo" rows={data.matriz_canais.filter((row) => row.order_source === "ADMIN")} />
+        <ChannelTable title="Salão" rows={data.matriz_canais.filter((row) => row.order_source === "SALON")} />
+      </div>
+
+      <SectionTitle title="Evolução dos recebimentos" description="Distribuição diária dos valores recebidos por origem." icon={CalendarDays} />
+      <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+        <CardContent className="pt-6">
+          {data.evolucao_diaria.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Nenhum valor recebido no período.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={data.evolucao_diaria}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="data" tickFormatter={dateLabel} tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(value) => Number(value).toLocaleString("pt-BR", { notation: "compact" })} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(value) => money(Number(value))} labelFormatter={(label) => dateLabel(String(label))} />
+                <Legend />
+                <Bar dataKey="app" name="App do cliente" stackId="recebimentos" fill="#7c3aed" />
+                <Bar dataKey="admin" name="Painel administrativo" stackId="recebimentos" fill="#2563eb" />
+                <Bar dataKey="salao" name="Salão" stackId="recebimentos" fill="#d97706" />
+                <Bar dataKey="desconhecido" name="Desconhecido" stackId="recebimentos" fill="#dc2626" />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
 
-      {pesquisaEspecifica && (
-        <Card className="overflow-hidden border-primary/30 shadow-sm">
-          <CardHeader className="border-b bg-primary/[0.04]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Search className="h-4 w-4 text-primary" aria-hidden="true" />
-                  Resultado da pesquisa específica
-                </CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {lojaPesquisada?.nome || "Todas as lojas"} · {formatDateLabel(dataInicio)} a {formatDateLabel(dataFim)}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
-                  {pesquisaEspecifica.situacao ? labelSituacaoFinanceira(pesquisaEspecifica.situacao) : "Todas as situações"}
-                </span>
-                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
-                  {pesquisaEspecifica.canal === "app" ? "No app" : pesquisaEspecifica.canal === "offline" ? "Offline/na entrega" : "Todos os canais"}
-                </span>
-                <span className="rounded-full border bg-background px-2.5 py-1 font-medium">
-                  {pesquisaEspecifica.metodo ? labelMetodoPagamento(pesquisaEspecifica.metodo) : "Todas as formas"}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
-                <p className="text-xs font-medium text-muted-foreground">Valor encontrado</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.valorTotal)}</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
-                <p className="text-xs font-medium text-muted-foreground">Pagamentos</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{num(resultadoPesquisaEspecifica.quantidade)}</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
-                <p className="text-xs font-medium text-muted-foreground">Valor líquido</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.valorLiquido)}</p>
-              </div>
-              <div className="rounded-lg border bg-slate-50 p-4 dark:bg-slate-900/40">
-                <p className="text-xs font-medium text-muted-foreground">Taxas de pagamento online</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{fmt(resultadoPesquisaEspecifica.taxasGateway)}</p>
-              </div>
-            </div>
-
-            {linhasPesquisaEspecifica.length > 0 ? (
-              <div className="mt-5 overflow-x-auto rounded-lg border">
-                <table className="w-full min-w-[720px] text-sm">
-                  <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3">Forma</th>
-                      <th className="px-4 py-3">Canal</th>
-                      <th className="px-4 py-3">Situação</th>
-                      <th className="px-4 py-3 text-right">Pagamentos</th>
-                      <th className="px-4 py-3 text-right">Valor</th>
-                      <th className="px-4 py-3 text-right">Líquido</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {linhasPesquisaEspecifica.map((item) => (
-                      <tr key={`${item.metodo_pagamento}-${item.canal_pagamento}-${item.situacao_financeira}`} className="border-t">
-                        <td className="px-4 py-3 font-medium">{labelMetodoPagamento(item.metodo_pagamento)}</td>
-                        <td className="px-4 py-3">{labelCanalPagamento(item.canal_pagamento)}</td>
-                        <td className="px-4 py-3">{labelSituacaoFinanceira(item.situacao_financeira)}</td>
-                        <td className="px-4 py-3 text-right">{num(item.quantidade)}</td>
-                        <td className="px-4 py-3 text-right font-semibold">{fmt(item.valor_total)}</td>
-                        <td className="px-4 py-3 text-right">{fmt(item.valor_liquido)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Nenhum pagamento foi encontrado com a combinação de filtros selecionada.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <DashboardSection
-        title={isStoreDashboard ? "Resumo operacional" : "Visão geral"}
-        description={isStoreDashboard
-          ? "Principais resultados e estrutura da loja no período selecionado."
-          : "Principais indicadores consolidados da plataforma."}
-        icon={ShoppingCart}
-      />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {!isStoreDashboard && (
-          <StatCard title="Lojas Ativas" value={num(r.lojas_ativas)} icon={Store}
-            sub={`${num(r.total_lojas)} total · ${num(r.lojas_inativas)} inativas`} color="text-indigo-500"
-            help="Quantidade de lojas cadastradas com status ativo. O total e as inativas mostram a situação atual do cadastro no escopo selecionado." />
-        )}
-        <StatCard title="Faturamento (Entregues)" value={fmt(ped.valor_pedidos_entregues)} icon={DollarSign}
-          sub={`${fmt(ped.valor_total_pedidos)} em pedidos totais`} color="text-emerald-500" trend="up"
-          help="Soma do campo total apenas dos pedidos com status entregue dentro do período filtrado. O subtítulo mostra o valor bruto de todos os pedidos do período, incluindo outros status." />
-        <StatCard title="Ticket Médio dos Pedidos" value={fmt(ped.ticket_medio)} icon={TrendingUp}
-          sub={`${num(ped.total_pedidos)} pedidos realizados`} color="text-violet-500"
-          help="Média do valor total dos pedidos criados ou realizados no período filtrado. Pode incluir pedidos ainda não entregues, cancelados ou não concluídos conforme vierem da base de pedidos." />
-        <StatCard title="Pedidos Totais" value={num(ped.total_pedidos)} icon={ShoppingCart}
-          sub={`${num(ped.pedidos_entregues)} entregues · ${num(ped.pedidos_cancelados)} cancelados`} color="text-blue-500"
-          help="Quantidade de pedidos encontrados no período filtrado, somando todos os status. Use entregues e cancelados no subtítulo para comparar conversão operacional." />
-        <StatCard title="Experiência" value={num(experiencia.total_avaliacoes)} icon={Smile}
-          sub={`${num(experiencia.otimo)} ótimo · ${num(experiencia.bom)} bom · ${num(experiencia.ruim)} ruim`}
-          color="text-rose-500"
-          help="Total de avaliações simples registradas pelos clientes no fim do pedido dentro do período filtrado, separadas entre ótimo, bom e ruim." />
-        <StatCard title="Clientes Ativos" value={num(r.clientes_ativos)} icon={Users}
-          sub={`${num(r.total_clientes)} total · ${num(r.clientes_bloqueados)} bloqueados`} color="text-cyan-500"
-          help="Clientes cadastrados que não estão bloqueados. Esta é uma contagem cadastral do escopo selecionado, não uma soma de compras do período." />
-        <StatCard title="Produtos Ativos" value={num(r.produtos_ativos)} icon={Package}
-          sub={`${num(r.total_produtos)} total · ${num(r.total_categorias)} categorias`} color="text-orange-500"
-          help="Produtos com status ativo no cadastro atual do escopo selecionado. O total inclui todos os produtos cadastrados, ativos ou não." />
-        <StatCard title="Entregadores Ativos" value={num(r.entregadores_ativos)} icon={Truck}
-          sub={`${num(r.total_entregadores)} cadastrados`} color="text-teal-500"
-          help="Entregadores com status ativo no cadastro atual. O subtítulo mostra todos os entregadores cadastrados no escopo selecionado." />
-        <StatCard title="Usuários do Sistema" value={num(r.usuarios_ativos)} icon={UserCheck}
-          sub={`${num(r.total_usuarios)} total · ${num(r.total_users_sistema)} users auth`} color="text-pink-500"
-          help="Usuários administrativos ativos no cadastro da plataforma. O total mostra usuários administrativos cadastrados; users auth mostra registros vinculados à autenticação quando disponível." />
+      <SectionTitle title="Taxa da plataforma" description="Cálculo dinâmico com a regra de split ativa no momento desta consulta." icon={HandCoins} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard title="Base elegível" value={platform.base_elegivel} description="Base atual que participa da cobrança da plataforma." icon={DollarSign} color="text-blue-600" />
+        <MetricCard title="Taxa calculada" value={platform.taxa_calculada} description="Valor calculado conforme a regra ativa de cada loja." icon={CircleDollarSign} color="text-indigo-600" />
+        <MetricCard title="Taxa líquida" value={platform.taxa_liquida} description="Taxa calculada após estornos proporcionais." icon={HandCoins} color="text-violet-600" />
+        <MetricCard title="Split recebido" value={platform.split_recebido} description="Valor confirmado ou liquidado para a plataforma." icon={CheckCircle2} color="text-emerald-600" />
+        <MetricCard title="Split pendente" value={platform.split_pendente} description="Valor online ainda aguardando liquidação." icon={Clock3} color="text-amber-600" />
+        <MetricCard title="A cobrar da loja" value={platform.valor_a_cobrar} description="Taxa relativa a pagamentos externos ou offline." icon={Store} color="text-orange-600" />
+        <MetricCard title="Taxa estornada" value={platform.taxa_estornada} description="Parcela da taxa reduzida por estornos." icon={RefreshCw} color="text-red-600" />
+        <MetricCard title="Diferença" value={platform.diferenca_conciliacao} description={platform.diferenca_conciliacao === 0 ? "Valores conciliados." : "Há valor que precisa ser conferido."} icon={ShieldCheck} color={platform.diferenca_conciliacao === 0 ? "text-emerald-600" : "text-red-600"} />
       </div>
 
-      {m.topLojas.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
-              Top Lojas por Faturamento
-              <MetricHelp text="Ranking das lojas com maior soma de pedidos entregues dentro do período filtrado. O gráfico usa o mesmo conceito do card Faturamento (Entregues)." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={m.topLojas} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} stroke="hsl(var(--muted-foreground))" />
-                <YAxis type="category" dataKey="nome" width={140} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  formatter={(v) => fmt(v as number | string | undefined)}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--popover))",
-                    borderColor: "hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                    color: "hsl(var(--popover-foreground))",
-                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-                  }}
-                  labelStyle={{ color: "hsl(var(--popover-foreground))" }}
-                />
-                <Bar dataKey="faturamento" fill="#6366f1" radius={[0, 6, 6, 0]} name="Faturamento" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {!isStoreDashboard && experienciaPorLoja.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Smile className="h-4 w-4 text-rose-500" aria-hidden="true" />
-              Experiência por Loja
-              <MetricHelp text="Lista as lojas com avaliações registradas no período filtrado. A média usa ruim como 1, bom como 2 e ótimo como 3." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {experienciaPorLoja.slice(0, 6).map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{item.nome}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {num(item.total_avaliacoes)} respostas · média {Number(item.nota_media || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right text-xs text-muted-foreground">
-                    <span className="font-semibold text-emerald-600">{num(item.otimo)}</span> ótimo ·{" "}
-                    <span className="font-semibold text-amber-600">{num(item.bom)}</span> bom ·{" "}
-                    <span className="font-semibold text-red-600">{num(item.ruim)}</span> ruim
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <DashboardSection
-        title="Financeiro do período"
-        description={isStoreDashboard
-          ? "Valores recebidos, previstos e estornados da loja, separados da cobrança da plataforma."
-          : "Resumo financeiro consolidado das lojas no período selecionado."}
-        icon={CreditCard}
-      />
-
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isStoreDashboard ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
-        <StatCard title="Pagamentos Recebidos" value={fmt(valorRecebido)} icon={CreditCard}
-          sub={`${num(pagamentosRecebidos)} de ${num(totalPagamentosDetalhados)} pagamento(s)`} color="text-emerald-500" trend="up"
-          help="Soma apenas dos pagamentos classificados como recebidos: status aprovado ou pagamento com data de recebimento, sem contar cancelados, rejeitados, expirados ou estornados." />
-        <StatCard title="Valor Líquido Recebido" value={fmt(valorLiquidoRecebido)} icon={DollarSign}
-          sub={`Taxas de pagamento online: ${fmt(taxasGatewayRecebidas)}`} color="text-green-500"
-          help="Valor recebido já com as taxas dos pagamentos online descontadas. Pagamentos feitos na entrega normalmente não têm essa taxa." />
-        <StatCard title="Pagamentos Estornados" value={fmt(valorEstornado)} icon={RefreshCw}
-          sub={`${num(pagamentosEstornados)} pagamento(s) estornado(s)`}
-          color="text-amber-500" trend={Number(pagamentosEstornados) > 0 ? "down" : "neutral"}
-          help="Soma dos pagamentos cujo status financeiro é estornado. Esses valores não entram em Pagamentos Recebidos, mesmo que tenham data de pagamento registrada." />
-        {isStoreDashboard && (
-          <>
-            <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
-              sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
-              color="text-slate-500"
-              help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
-            <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
-              sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
-              color="text-amber-500"
-              help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
-          </>
-        )}
-        <StatCard title="Cobrança da plataforma" value={fmt(splitResumo.valor_final_cobranca)} icon={ArrowUpRight}
-          sub={`${num(splitResumo.quantidade_pedidos_cobrados)} de ${num(splitResumo.quantidade_pedidos_total)} pedido(s) - ${fmt(splitResumo.valor_bruto_total)} bruto`}
-          color="text-indigo-500"
-          help="Taxa líquida calculada pela fonte canônica financeira para pedidos elegíveis no período." />
-        {!isStoreDashboard && (
-          <>
-            <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
-              sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
-              color="text-emerald-500"
-              help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
-            <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
-              sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
-              color="text-orange-500"
-              help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
-            <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
-              sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
-              color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
-              help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
-          </>
-        )}
-      </div>
-
-      {isStoreDashboard && (
-        <>
-          <DashboardSection
-            title="Conciliação da plataforma"
-            description="Acompanhe o recebimento da taxa, valores pendentes e possíveis diferenças da loja."
-            icon={ShieldAlert}
-          />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard title="Split recebido" value={fmt(splitResumo.taxa_recebida_via_split)} icon={CheckCircle2}
-              sub={`Pendente: ${fmt(splitResumo.taxa_pendente_liquidacao)}`}
-              color="text-emerald-500"
-              help="Valor da taxa da plataforma com evidência de split confirmado ou liquidado. Valores apenas calculados ficam como pendentes." />
-            <StatCard title="A cobrar da loja" value={fmt(splitResumo.taxa_a_cobrar_estabelecimento)} icon={Store}
-              sub={`Diferença: ${fmt(splitResumo.diferenca_conciliacao)}`}
-              color="text-orange-500"
-              help="Taxa gerada por pagamentos externos ou offline que não foi recebida via split e deve ser cobrada manualmente do estabelecimento." />
-            <StatCard title="Auditoria financeira" value={financeiroQuery.isFetching ? "Atualizando" : fmt(splitResumo.diferenca_conciliacao)} icon={ShieldAlert}
-              sub={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "Conciliação sem diferença" : "Há divergência para revisar"}
-              color={Number(splitResumo.diferenca_conciliacao || 0) === 0 ? "text-emerald-500" : "text-red-500"}
-              help="Diferença entre taxa líquida e a soma de split recebido, split pendente, cobrança manual e recebimento manual." />
-          </div>
-        </>
-      )}
-
-      {splitCategorias.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ArrowUpRight className="h-4 w-4 text-indigo-500" aria-hidden="true" />
-              Detalhamento da cobrança
-              <MetricHelp text="Resumo da cobrança da plataforma por tipo de pedido configurado em cada loja." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {splitCategorias.map((category) => (
-                <div key={category.categoria} className="rounded-lg border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{category.label || category.categoria}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {num(category.quantidade_cobrada)} de {num(category.quantidade_pedidos)} pedido(s)
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <p className="text-lg font-bold">{fmt(category.valor_cobranca)}</p>
-                    <p className="text-xs text-muted-foreground">Bruto {fmt(category.valor_bruto)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {lojasFinanceiras.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Store className="h-4 w-4 text-indigo-500" aria-hidden="true" />
-              Conciliação por loja
-              <MetricHelp text="Tabela calculada pela fonte canônica financeira. A diferença deve ser zero para a loja ser considerada conciliada." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
+      <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Store className="h-4 w-4 text-primary" /> Conciliação por loja</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {data.taxa_plataforma.por_loja.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhum valor encontrado para as lojas selecionadas.</div>
+          ) : (
+            <table className="w-full min-w-[1420px] text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   <th className="px-3 py-2">Loja</th>
-                  <th className="px-3 py-2 text-right">Pedidos</th>
-                  <th className="px-3 py-2 text-right">GMV válido</th>
-                  <th className="px-3 py-2 text-right">Base elegível</th>
+                  <th className="px-3 py-2">Regra ativa</th>
+                  <th className="px-3 py-2 text-right">App</th>
+                  <th className="px-3 py-2 text-right">Admin</th>
+                  <th className="px-3 py-2 text-right">Salão</th>
+                  <th className="px-3 py-2 text-right">Online</th>
+                  <th className="px-3 py-2 text-right">Offline</th>
                   <th className="px-3 py-2 text-right">Taxa líquida</th>
                   <th className="px-3 py-2 text-right">Split recebido</th>
                   <th className="px-3 py-2 text-right">Split pendente</th>
                   <th className="px-3 py-2 text-right">A cobrar</th>
                   <th className="px-3 py-2 text-right">Diferença</th>
-                  <th className="px-3 py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {lojasFinanceiras.map((store) => (
-                  <tr key={store.loja_id} className="border-b last:border-0">
-                    <td className="px-3 py-3 font-medium">{store.loja_nome}</td>
-                    <td className="px-3 py-3 text-right">{num(store.quantidade_pedidos)}</td>
-                    <td className="px-3 py-3 text-right">{fmt(store.valor_bruto_pedidos_validos)}</td>
-                    <td className="px-3 py-3 text-right">{fmt(store.base_elegivel)}</td>
-                    <td className="px-3 py-3 text-right font-semibold">{fmt(store.taxa_liquida)}</td>
-                    <td className="px-3 py-3 text-right">{fmt(store.taxa_recebida_via_split)}</td>
-                    <td className="px-3 py-3 text-right">{fmt(store.taxa_pendente_liquidacao)}</td>
-                    <td className="px-3 py-3 text-right">{fmt(store.taxa_a_cobrar_estabelecimento)}</td>
-                    <td className={`px-3 py-3 text-right font-semibold ${Number(store.diferenca_conciliacao || 0) === 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      {fmt(store.diferenca_conciliacao)}
-                    </td>
+                {data.taxa_plataforma.por_loja.map((row) => (
+                  <tr key={row.loja_id} className="border-b last:border-0">
+                    <td className="px-3 py-3 font-semibold">{row.loja_nome}</td>
                     <td className="px-3 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                        store.status === "conciliado"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : store.status === "pendente"
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-red-50 text-red-700"
-                      }`}>
-                        {store.status}
-                      </span>
+                      {row.regra_split ? (
+                        <div>
+                          <p className="font-medium">{row.regra_split.nome || "Regra ativa"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.regra_split.tipo_valor === "percentual" ? `${row.regra_split.valor}%` : money(row.regra_split.valor)}
+                          </p>
+                        </div>
+                      ) : <span className="font-medium text-red-600">Sem regra</span>}
                     </td>
+                    <td className="px-3 py-3 text-right">{money(row.app_recebido)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.admin_recebido)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.salao_recebido)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.online_recebido)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.offline_recebido)}</td>
+                    <td className="px-3 py-3 text-right font-semibold">{money(row.taxa_liquida)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.split_recebido)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.split_pendente)}</td>
+                    <td className="px-3 py-3 text-right">{money(row.valor_a_cobrar)}</td>
+                    <td className={`px-3 py-3 text-right font-semibold ${row.diferenca_conciliacao === 0 ? "text-emerald-600" : "text-red-600"}`}>{money(row.diferenca_conciliacao)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      <DashboardSection
-        title="Pagamentos por canal"
-        description="Compare onde os pagamentos foram realizados e como os valores estão distribuídos."
-        icon={DollarSign}
-      />
-
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isStoreDashboard ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
-        {!isStoreDashboard && (
-          <>
-            <StatCard title="Total Registrado" value={fmt(valorRegistrado)} icon={DollarSign}
-              sub={`${num(totalPagamentosDetalhados)} pagamento(s), todos os status`}
-              color="text-slate-500"
-              help="Soma bruta de todos os registros de pagamento no período, independentemente do status. Use para conciliar o movimento total; não representa dinheiro recebido." />
-            <StatCard title="Previsto a Receber" value={fmt(valorPrevisto)} icon={Clock}
-              sub={`${num(pagamentosPrevistos)} pagamento(s) pendente(s)`}
-              color="text-amber-500"
-              help="Pagamentos pendentes, em processamento ou processando. Esses valores ainda não são considerados recebidos e podem mudar de status." />
-          </>
-        )}
-        <StatCard title="Recebido na Entrega" value={fmt(canalEntrega.valor_recebido)} icon={Truck}
-          sub={`${num(canalEntrega.recebidos)} recebido(s) · ${fmt(canalEntrega.valor_total)} registrado(s)`}
-          color="text-cyan-500"
-          help="Parte recebida dos pagamentos marcados para cobrança presencial na entrega, como dinheiro ou cartão pago na entrega. O valor registrado no subtítulo inclui todos os status desse canal." />
-        <StatCard title="Recebido no App" value={fmt(canalApp.valor_recebido)} icon={CreditCard}
-          sub={`${num(canalApp.recebidos)} recebido(s) · ${fmt(canalApp.valor_total)} registrado(s)`}
-          color="text-violet-500"
-          help="Parte recebida dos pagamentos feitos no app, como PIX ou cartão online. O valor registrado no subtítulo inclui aprovados, pendentes, rejeitados, cancelados, expirados e estornados." />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <MiniSummary icon={DollarSign} title="Por Forma de Pagamento" color="text-emerald-500" rows={
-          pagamentosPorForma.length
-            ? pagamentosPorForma.map((item) => [
-                labelMetodoPagamento(item.metodo_pagamento),
-                `${fmt(item.valor_recebido)} receb. · ${fmt(item.valor_previsto_receber)} prev.`,
-              ])
-            : [["Sem dados", fmt(0)]]
-        } help="Mostra quanto já foi recebido e quanto ainda está previsto por forma de pagamento. Valores rejeitados, cancelados, expirados ou estornados aparecem na distribuição de Status Financeiro." />
-        <MiniSummary icon={Truck} title="Por Canal de Pagamento" color="text-cyan-500" rows={
-          pagamentosPorCanal.length
-            ? pagamentosPorCanal.map((item) => [
-                labelCanalPagamento(item.canal_pagamento),
-                `${fmt(item.valor_recebido)} receb. · ${fmt(item.valor_previsto_receber)} prev.`,
-              ])
-            : [["Sem dados", fmt(0)]]
-        } help="Separa pagamentos do checkout do app e pagamentos cobrados na entrega. Cada linha exibe apenas o valor recebido e o valor previsto desse canal." />
-        <MiniSummary icon={AlertTriangle} title="Status Financeiro" color="text-amber-500" rows={
-          pagamentosPorStatus.length
-            ? pagamentosPorStatus.map((item) => [
-                `${labelSituacaoFinanceira(item.situacao_financeira)} (${item.pagamento_status || "-"})`,
-                `${fmt(item.valor_total)} · ${num(item.quantidade)}`,
-              ])
-            : [["Sem dados", fmt(0)]]
-        } help="Agrupa os pagamentos pela situação financeira usada nos cards e pelo status original gravado no pagamento. É a melhor visão para explicar diferenças entre total registrado e recebido." />
-      </div>
-
-      {pagamentosPorFormaCanal.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
-              Detalhamento de Pagamentos
-              <MetricHelp text="Quebra os pagamentos por forma, canal e situação financeira. Use esta seção para conferir quais valores foram recebidos, previstos, rejeitados, cancelados, expirados ou estornados." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {pagamentosPorFormaCanal.map((item) => (
-                <div key={`${item.metodo_pagamento}-${item.canal_pagamento}-${item.situacao_financeira}`} className="rounded-lg border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{labelMetodoPagamento(item.metodo_pagamento)}</p>
-                      <p className="text-xs text-muted-foreground">{labelCanalPagamento(item.canal_pagamento)} · {labelSituacaoFinanceira(item.situacao_financeira)}</p>
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">{num(item.quantidade)}</span>
-                  </div>
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-bold">{fmt(item.valor_total)}</p>
-                      <p className="text-xs text-muted-foreground">Líquido {fmt(item.valor_liquido)}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Taxas de pagamento online {fmt(item.taxas_gateway)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <DashboardSection
-        title="Indicadores de apoio"
-        description={isStoreDashboard
-          ? "Informações operacionais complementares para acompanhar a rotina da loja."
-          : "Informações operacionais complementares da plataforma."}
-        icon={Package}
-      />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniSummary icon={Truck} title="Entregas" color="text-teal-500" rows={[
-          ["Total", num(m.entregas.total_entregas)],
-          ["Aguardando", num(m.entregas.entregas_aguardando)],
-          ["Em andamento", num(m.entregas.entregas_em_andamento)],
-          ["Concluídas", num(m.entregas.entregas_concluidas)],
-        ]} help="Resumo operacional das entregas registradas no escopo selecionado. A plataforma geral pode representar o estado atual das entregas, não necessariamente apenas o período dos pedidos." />
-        <MiniSummary icon={Box} title="Estoque" color="text-orange-500" rows={[
-          ["Registros", num(m.estoque.total_registros_estoque)],
-          ["Estoque baixo", num(m.estoque.produtos_estoque_baixo)],
-          ["Sem estoque", num(m.estoque.produtos_sem_estoque)],
-          ["Reservados", num(m.estoque.total_quantidade_reservada)],
-        ]} help="Situação atual dos registros de estoque no escopo selecionado. Estoque baixo compara quantidade disponível com quantidade mínima; sem estoque indica quantidade disponível igual a zero." />
-        <MiniSummary icon={ShoppingCart} title="Carrinhos" color="text-violet-500" rows={[
-          ["Total", num(m.carrinhos.total_carrinhos)],
-          ["Ativos", num(m.carrinhos.carrinhos_ativos)],
-          ["Convertidos", num(m.carrinhos.carrinhos_convertidos)],
-          ["Abandonados", num(m.carrinhos.carrinhos_abandonados)],
-        ]} help="Resumo dos carrinhos registrados por status. Ativos ainda estão em aberto, convertidos viraram pedido e abandonados ficaram sem conclusão." />
-        <MiniSummary icon={Ticket} title="Cupons e auditoria" color="text-pink-500" rows={[
-          ["Cupons ativos", num(r.cupons_ativos)],
-          ["Usos de cupom", num(m.cupons.total_usos)],
-          ["Logs auditoria", num(m.auditoria.total_logs)],
-          ["Webhooks", `${num(fin.webhooks.processadas)}/${num(fin.webhooks.total_notificacoes)}`],
-        ]} help="Acompanha cupons ativos, uso de cupons, logs administrativos e webhooks de pagamento processados. Em Webhooks, o formato é processados sobre total recebido." />
-      </div>
-
-      {(Number(m.estoque.produtos_sem_estoque) > 0 || Number(fin.webhooks.com_erro) > 0 || Number(fin.pagamentos.pagamentos_rejeitados) > 0) && (
-        <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              Alertas
-              <MetricHelp text="Mostra somente indicadores que precisam de atenção operacional, como produto sem estoque, webhook com erro ou pagamento rejeitado." />
-            </CardTitle>
-          </CardHeader>
+      <SectionTitle title="Fiado" description="Crédito registrado e valores efetivamente recebidos em baixas posteriores." icon={Landmark} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard title="Fiado lançado" value={data.fiado.valor_lancado} description="Valor registrado como crédito no período." icon={Landmark} color="text-violet-600" />
+        <MetricCard title="Saldo pendente" value={data.fiado.saldo_pendente} description="Valor de fiado ainda tratado separadamente das entradas." icon={Clock3} color="text-amber-600" />
+        <MetricCard title="Fiado recebido" value={data.fiado.valor_recebido} description="Baixas de fiado recebidas entre as datas." icon={CheckCircle2} color="text-emerald-600" />
+        <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Recebimentos por forma</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {Number(m.estoque.produtos_sem_estoque) > 0 && <p className="text-amber-700 dark:text-amber-400">{num(m.estoque.produtos_sem_estoque)} produto(s) sem estoque</p>}
-            {Number(fin.webhooks.com_erro) > 0 && <p className="text-amber-700 dark:text-amber-400">{num(fin.webhooks.com_erro)} webhook(s) com erro de processamento</p>}
-            {Number(fin.pagamentos.pagamentos_rejeitados) > 0 && <p className="text-amber-700 dark:text-amber-400">{num(fin.pagamentos.pagamentos_rejeitados)} pagamento(s) rejeitado(s)</p>}
+            {data.fiado.recebimentos_por_metodo.length
+              ? data.fiado.recebimentos_por_metodo.map((item) => <ValueRow key={item.payment_method} label={methodLabels[item.payment_method] || item.payment_method} value={item.valor_recebido} />)
+              : <p className="text-sm text-muted-foreground">Nenhuma baixa no período.</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <SectionTitle title="Situação financeira" description="Distribuição dos valores registrados conforme o estado atual de cada pagamento." icon={ShieldCheck} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {data.por_situacao.map((item) => (
+          <MetricCard key={item.key} title={item.label || statusLabels[item.key] || item.key} value={item.valor_registrado} description={`Recebido ${money(item.valor_recebido)} · Pendente ${money(item.valor_pendente)}`} icon={item.key === "RECEIVED" ? CheckCircle2 : item.key === "PENDING" ? Clock3 : AlertTriangle} color={item.key === "RECEIVED" ? "text-emerald-600" : item.key === "PENDING" ? "text-amber-600" : "text-red-600"} />
+        ))}
+      </div>
+
+      {hasAlerts && (
+        <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300"><AlertTriangle className="h-4 w-4" /> Pontos para conferência</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+            {data.alertas.origem_desconhecida !== 0 && <div className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="text-muted-foreground">Origem desconhecida</p><p className="mt-1 font-bold">{money(data.alertas.origem_desconhecida)}</p></div>}
+            {data.alertas.lojas_sem_regra.map((item) => <div key={item.loja_id} className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="font-medium">{item.loja_nome}</p><p className="text-xs text-muted-foreground">Sem regra ativa · {money(item.valor_registrado)}</p></div>)}
+            {data.alertas.diferenca_conciliacao !== 0 && <div className="rounded-lg border border-red-200 bg-white/70 p-3 dark:bg-slate-950/40"><p className="text-muted-foreground">Diferença de conciliação</p><p className="mt-1 font-bold text-red-600">{money(data.alertas.diferenca_conciliacao)}</p></div>}
           </CardContent>
         </Card>
       )}
-    </div>
-  );
-}
 
-function MiniSummary({ icon: Icon, title, rows, color, help }: {
-  icon: ElementType;
-  title: string;
-  rows: Array<[string, string]>;
-  color: string;
-  help: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${color}`} aria-hidden="true" />
-          {title}
-          <MetricHelp text={help} />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-3">
-            <span className="text-muted-foreground">{label}</span>
-            <span className="font-medium text-right">{value}</span>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+      <p className="text-right text-xs text-muted-foreground">
+        Atualizado em {formatBrasiliaDate(data.gerado_em, { dateStyle: "short", timeStyle: "short" })} · Regra de split consultada em tempo real.
+      </p>
+    </div>
   );
 }
