@@ -68,6 +68,8 @@ export default function StoreDetails() {
 
   const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
   const adminOrderFeeEnabled = storeConfig?.aplicar_taxa_pedidos_admin === true;
+  const adminPixEnabled = storeConfig?.pix_pedido_admin_habilitado === true;
+  const adminPixExpiration = Number(storeConfig?.pix_pedido_admin_expiracao_minutos) || 30;
   const receiptPinRequired = storeConfig?.exigir_pin_confirmacao_entrega === true;
   const cpfInvoiceEnabled = storeConfig?.permitir_cpf_na_nota_cliente === true;
   const moduleList: StoreModuleView[] = Array.isArray(modules) ? modules : [];
@@ -320,6 +322,16 @@ export default function StoreDetails() {
                       </span>
                     </span>
                     {preferenceBadge(adminOrderFeeEnabled, "Aplicada", "Desativada")}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="block text-sm font-medium">Pix por link administrativo</span>
+                      <span className="block text-xs text-muted-foreground">
+                        QR Code válido por {adminPixExpiration} minutos; link compartilhável válido por sete dias.
+                      </span>
+                    </span>
+                    {preferenceBadge(adminPixEnabled, "Habilitado", "Desabilitado")}
                   </div>
 
                   <div className="flex items-center justify-between gap-4 rounded-md border p-3">

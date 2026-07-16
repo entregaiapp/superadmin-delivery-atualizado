@@ -53,6 +53,11 @@ export interface StoreAdminOrderFeePreference {
   aplicar_taxa_pedidos_admin: boolean;
 }
 
+export interface StoreAdminPixPreference {
+  pix_pedido_admin_habilitado: boolean;
+  pix_pedido_admin_expiracao_minutos: number;
+}
+
 export interface StoreCpfInvoicePreference {
   permitir_cpf_na_nota_cliente: boolean;
 }
@@ -64,6 +69,7 @@ export interface StoreReceiptPinPreference {
 export type StoreConfigurationUpdate = Partial<
   StoreOrderCreationPreference &
   StoreAdminOrderFeePreference &
+  StoreAdminPixPreference &
   StoreCpfInvoicePreference &
   StoreReceiptPinPreference
 >;
