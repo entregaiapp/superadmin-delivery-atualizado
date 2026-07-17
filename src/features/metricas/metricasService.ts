@@ -34,6 +34,7 @@ export interface MetricasGerais {
       valor_pedidos_entregues: number;
       total_descontos_aplicados: number;
       total_taxas_entrega: number;
+      total_taxas_reentrega?: number;
       ticket_medio: number;
     };
     por_origem: Array<{

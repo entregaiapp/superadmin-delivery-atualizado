@@ -109,6 +109,7 @@ export interface DeliveryPaymentBillingReport {
     valor_bruto_fiados?: number;
     valor_bruto_salao?: number;
     valor_bruto_total: number;
+    total_taxas_reentrega?: number;
     valor_final_cobranca: number;
     categorias?: Array<{
       categoria: string;
@@ -129,6 +130,7 @@ export interface DeliveryPaymentBillingReport {
     valor_bruto_clientes: number;
     valor_bruto_manuais: number;
     valor_bruto_total: number;
+    total_taxas_reentrega?: number;
     valor_a_receber: number;
     valor_a_receber_por_categoria?: Record<string, number>;
   }>;
@@ -161,6 +163,7 @@ export interface DeliveryPaymentBillingReport {
     subtotal: number;
     desconto: number;
     taxa_entrega: number;
+    taxa_reentrega_total?: number;
     total: number;
     valor_cobranca: number;
     valor_taxa_calculada: number;

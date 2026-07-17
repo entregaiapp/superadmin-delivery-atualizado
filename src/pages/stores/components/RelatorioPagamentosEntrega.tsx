@@ -79,6 +79,7 @@ function buildCsv(report: DeliveryPaymentBillingReport) {
     ["Pedidos fiado", report.resumo.quantidade_pedidos_fiados || 0],
     ["Pedidos salão", report.resumo.quantidade_pedidos_salao || 0],
     ["Valor bruto total", report.resumo.valor_bruto_total],
+    ["Total taxas reentrega", report.resumo.total_taxas_reentrega || 0],
     ["Valor final da cobrança", report.resumo.valor_final_cobranca],
     [],
     [
@@ -227,6 +228,7 @@ export default function RelatorioPagamentosEntrega({
               <Summary title="Pedidos manuais" value={String(report.resumo.quantidade_pedidos_manuais)} />
               <Summary title="Pedidos fiado" value={String(report.resumo.quantidade_pedidos_fiados || 0)} />
               <Summary title="Valor bruto" value={money(report.resumo.valor_bruto_total)} />
+              <Summary title="Taxas de reentrega" value={money(report.resumo.total_taxas_reentrega || 0)} />
             </div>
 
             {Array.isArray(report.categorias) && report.categorias.length > 0 && (
