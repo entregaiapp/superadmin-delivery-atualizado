@@ -162,6 +162,7 @@ export interface DeliveryPaymentBillingReport {
     pagamento_entrega_tipo: "dinheiro" | "cartao" | string;
     subtotal: number;
     desconto: number;
+    acrescimo: number;
     taxa_entrega: number;
     taxa_reentrega_total?: number;
     total: number;
