@@ -20,6 +20,7 @@ type StoreModuleView = {
   enabled?: boolean;
 };
 const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
+const DAYS_OF_WEEK = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
 export default function StoreDetails() {
   const { id } = useParams<{ id: string }>();
@@ -264,19 +265,25 @@ export default function StoreDetails() {
               <CardDescription>Horários, taxas e valores</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Abertura
-                  </p>
-                  <p className="text-lg font-semibold">{store.horario_abertura || "—"}</p>
+              <div className="space-y-3">
+                <div className="grid gap-2 md:grid-cols-2">
+                  {DAYS_OF_WEEK.map((dayName, day) => {
+                    const shifts = (store.horarios_funcionamento || []).filter((shift) => shift.dia_semana === day && shift.aberto);
+                    return (
+                      <div key={day} className="rounded-lg border p-3">
+                        <p className="text-sm font-semibold">{dayName}</p>
+                        {shifts.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">Fechado</p>
+                        ) : shifts.map((shift) => (
+                          <p key={shift.id || `${shift.nome_turno}-${shift.horario_abertura}`} className="mt-1 text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{shift.nome_turno}</span> · {shift.horario_abertura.slice(0, 5)} às {shift.horario_fechamento.slice(0, 5)}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Fechamento
-                  </p>
-                  <p className="text-lg font-semibold">{store.horario_fechamento || "—"}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <DollarSign className="w-3 h-3" /> Pedido Mínimo
@@ -293,6 +300,7 @@ export default function StoreDetails() {
                     R$ {Number(store.taxa_entrega_padrao || 0).toFixed(2)}
                   </p>
                 </div>
+              </div>
               </div>
 
               <div className="space-y-3 border-t pt-5">

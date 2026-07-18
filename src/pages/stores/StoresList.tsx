@@ -142,9 +142,9 @@ export default function StoresList() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {store.horario_abertura && store.horario_fechamento 
-                        ? `${store.horario_abertura} – ${store.horario_fechamento}`
-                        : "—"}
+                      {store.horarios_funcionamento?.length
+                        ? `${store.horarios_funcionamento.filter((shift) => shift.aberto).length} turno(s) ativo(s)`
+                        : "Sem turnos"}
                     </span>
                   </TableCell>
                   <TableCell>

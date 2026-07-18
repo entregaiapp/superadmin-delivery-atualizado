@@ -1,5 +1,14 @@
 import { api } from "../../lib/api";
 
+export interface BusinessShift {
+  id?: string;
+  dia_semana: number;
+  aberto: boolean;
+  nome_turno: string;
+  horario_abertura: string;
+  horario_fechamento: string;
+}
+
 export interface Store {
   id: string;
   subdomain?: string | null;
@@ -13,6 +22,7 @@ export interface Store {
   status: "ativa" | "inativa";
   horario_abertura?: string | null;
   horario_fechamento?: string | null;
+  horarios_funcionamento?: BusinessShift[];
   valor_minimo_pedido: number;
   taxa_entrega_padrao: number;
   latitude?: number | null;
@@ -264,6 +274,11 @@ export const storeService = {
   update: async (id: string, data: StoreUpdatePayload) => {
     const response = await api.put(`/lojas/${id}`, data);
     return normalizeStore(unwrapApiData(response.data));
+  },
+
+  saveBusinessShifts: async (storeId: string, shifts: BusinessShift[]) => {
+    const response = await api.put(`/horarios_funcionamento/${storeId}`, { horarios: shifts });
+    return unwrapApiData<BusinessShift[]>(response.data);
   },
 
   upsertColors: async (storeId: string, colors: StoreColorPayload) => {

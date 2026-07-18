@@ -7,13 +7,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import {
   storeService,
+  type BusinessShift,
   type StoreCreatePayload,
 } from "../../features/stores/storeService";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { ArrowLeft, KeyRound, Puzzle, Save, UtensilsCrossed, WalletCards } from "lucide-react";
+import { ArrowLeft, KeyRound, Plus, Puzzle, Save, Trash2, UtensilsCrossed, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import ContasFinanceirasLoja from "./components/ContasFinanceirasLoja";
 
@@ -21,6 +22,49 @@ const DEFAULT_PRIMARY_COLOR = "#122a4c";
 const DEFAULT_SECONDARY_COLOR = "#16a34a";
 const TENANT_ROOT_DOMAIN = import.meta.env.VITE_TENANT_ROOT_DOMAIN || "entregaiapp.com.br";
 const RESERVED_SUBDOMAINS = new Set(["admin", "app", "api", "www", "dashboard", "login", "cliente"]);
+const DAYS_OF_WEEK = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const defaultBusinessShifts = (): BusinessShift[] => Array.from({ length: 7 }, (_, day) => ({
+  dia_semana: day,
+  aberto: true,
+  nome_turno: "Turno 1",
+  horario_abertura: "08:00",
+  horario_fechamento: "22:00",
+}));
+const WEEK_MINUTES = 7 * 24 * 60;
+const parseShiftTime = (value: string) => {
+  const [hours, minutes] = String(value || "").split(":").map(Number);
+  return Number.isInteger(hours) && hours >= 0 && hours <= 23 && Number.isInteger(minutes) && minutes >= 0 && minutes <= 59
+    ? hours * 60 + minutes
+    : null;
+};
+const validateBusinessShifts = (shifts: BusinessShift[]) => {
+  const names = new Set<string>();
+  const intervals: Array<{ start: number; end: number; name: string }> = [];
+  for (const shift of shifts) {
+    const name = shift.nome_turno.trim();
+    const opening = parseShiftTime(shift.horario_abertura);
+    const closing = parseShiftTime(shift.horario_fechamento);
+    if (!name) return "Informe o nome de todos os turnos.";
+    const nameKey = `${shift.dia_semana}:${name.toLocaleLowerCase("pt-BR")}`;
+    if (names.has(nameKey)) return `O nome do turno “${name}” está repetido no mesmo dia.`;
+    names.add(nameKey);
+    if (opening === null || closing === null || opening === closing) return `Revise o horário do turno “${name}”.`;
+    if (shift.aberto) {
+      const start = shift.dia_semana * 1440 + opening;
+      intervals.push({ start, end: shift.dia_semana * 1440 + closing + (closing <= opening ? 1440 : 0), name });
+    }
+  }
+  for (let first = 0; first < intervals.length; first += 1) {
+    for (let second = first + 1; second < intervals.length; second += 1) {
+      const overlaps = [-WEEK_MINUTES, 0, WEEK_MINUTES].some((offset) => (
+        Math.max(intervals[first].start, intervals[second].start + offset)
+          < Math.min(intervals[first].end, intervals[second].end + offset)
+      ));
+      if (overlaps) return `Os turnos “${intervals[first].name}” e “${intervals[second].name}” possuem horários sobrepostos.`;
+    }
+  }
+  return null;
+};
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Informe uma cor válida");
 const subdomainSchema = z.string()
   .refine((value) => !value || value === value.trim(), "Não use espaços no início ou fim")
@@ -105,6 +149,7 @@ export default function StoreForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
+  const [businessShifts, setBusinessShifts] = useState<BusinessShift[]>(defaultBusinessShifts);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StoreFormValues>({
     resolver: zodResolver(storeSchema),
@@ -167,6 +212,18 @@ export default function StoreForm() {
 
   useEffect(() => {
     if (store && isEditing) {
+      const configuredShifts = Array.isArray(store.horarios_funcionamento) ? store.horarios_funcionamento : [];
+      setBusinessShifts(configuredShifts.length > 0 ? configuredShifts : (
+        store.horario_abertura && store.horario_fechamento
+          ? Array.from({ length: 7 }, (_, day) => ({
+              dia_semana: day,
+              aberto: true,
+              nome_turno: "Turno 1",
+              horario_abertura: store.horario_abertura!,
+              horario_fechamento: store.horario_fechamento!,
+            }))
+          : []
+      ));
       reset({
         nome: store.nome || "",
         subdomain: store.subdomain || "",
@@ -282,6 +339,7 @@ export default function StoreForm() {
             config: module.config || {},
           }))));
         }
+        followUpUpdates.push(storeService.saveBusinessShifts(id!, businessShifts));
 
         if (followUpUpdates.length > 0) {
           await Promise.all(followUpUpdates);
@@ -290,7 +348,14 @@ export default function StoreForm() {
         return updatedStore;
       }
 
-      return storeService.create(payload);
+      const createdStore = await storeService.create(payload);
+      try {
+        await storeService.saveBusinessShifts(createdStore.id, businessShifts);
+      } catch {
+        navigate(`/stores/${createdStore.id}/edit`, { replace: true });
+        throw new Error("A loja foi criada, mas os turnos não foram salvos. Revise os horários e salve novamente.");
+      }
+      return createdStore;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stores"] });
@@ -315,7 +380,29 @@ export default function StoreForm() {
 
   const onSubmit: SubmitHandler<StoreFormValues> = (data) => {
     setError("");
+    const shiftError = validateBusinessShifts(businessShifts);
+    if (shiftError) {
+      setError(shiftError);
+      return;
+    }
     mutation.mutate(data);
+  };
+
+  const updateBusinessShift = (index: number, field: keyof BusinessShift, value: string | boolean) => {
+    setBusinessShifts((current) => current.map((shift, shiftIndex) => (
+      shiftIndex === index ? { ...shift, [field]: value } : shift
+    )));
+  };
+
+  const addBusinessShift = (day: number) => {
+    const count = businessShifts.filter((shift) => shift.dia_semana === day).length;
+    setBusinessShifts((current) => [...current, {
+      dia_semana: day,
+      aberto: true,
+      nome_turno: `Turno ${count + 1}`,
+      horario_abertura: "08:00",
+      horario_fechamento: "12:00",
+    }]);
   };
 
   const toggleModuleSetting = (slug: string, enabled: boolean) => {
@@ -789,14 +876,59 @@ export default function StoreForm() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="horario_abertura">Horário de Abertura</Label>
-                <Input id="horario_abertura" type="time" {...register("horario_abertura")} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="horario_fechamento">Horário de Fechamento</Label>
-                <Input id="horario_fechamento" type="time" {...register("horario_fechamento")} />
+              <div className="space-y-3 md:col-span-2">
+                <div>
+                  <Label>Turnos de funcionamento</Label>
+                  <p className="text-xs text-muted-foreground">Cadastre um ou mais períodos por dia. Intervalos entre turnos deixam a loja fechada.</p>
+                </div>
+                {DAYS_OF_WEEK.map((dayName, day) => {
+                  const shifts = businessShifts.map((shift, index) => ({ shift, index }))
+                    .filter(({ shift }) => shift.dia_semana === day)
+                    .sort((first, second) => first.shift.horario_abertura.localeCompare(second.shift.horario_abertura));
+                  return (
+                    <div key={day} className="rounded-lg border bg-muted/20 p-3">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{dayName}</p>
+                          <p className="text-xs text-muted-foreground">{shifts.filter(({ shift }) => shift.aberto).length} turno(s) ativo(s)</p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => addBusinessShift(day)}>
+                          <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar turno
+                        </Button>
+                      </div>
+                      {shifts.length === 0 ? (
+                        <div className="rounded-md border border-dashed bg-background p-4 text-center text-xs text-muted-foreground">Fechado — nenhum turno configurado.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {shifts.map(({ shift, index }) => (
+                            <div key={shift.id || `${day}-${index}`} className="grid gap-2 rounded-md border bg-background p-3 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Nome</Label>
+                                <Input value={shift.nome_turno} maxLength={80} onChange={(event) => updateBusinessShift(index, "nome_turno", event.target.value)} placeholder="Ex.: Almoço" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Abertura</Label>
+                                <Input type="time" value={shift.horario_abertura} onChange={(event) => updateBusinessShift(index, "horario_abertura", event.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Fechamento</Label>
+                                <Input type="time" value={shift.horario_fechamento} onChange={(event) => updateBusinessShift(index, "horario_fechamento", event.target.value)} />
+                              </div>
+                              <div className="flex gap-1">
+                                <Button type="button" variant="outline" size="sm" onClick={() => updateBusinessShift(index, "aberto", !shift.aberto)}>
+                                  {shift.aberto ? "Ativo" : "Inativo"}
+                                </Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setBusinessShifts((current) => current.filter((_, itemIndex) => itemIndex !== index))} title="Remover turno">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-2">
