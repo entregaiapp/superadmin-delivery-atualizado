@@ -101,19 +101,19 @@ export default function ProdutosList() {
           <h2 className="text-2xl font-bold tracking-tight">Produtos Globais</h2>
           <p className="text-muted-foreground">Gerencie o catálogo global de produtos da plataforma.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => produtos[0] && setImageModalIndex(0)} disabled={produtos.length === 0}>
+        <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => produtos[0] && setImageModalIndex(0)} disabled={produtos.length === 0}>
             <ImageIcon className="w-4 h-4 mr-2" />
             Gerenciar imagens
           </Button>
-          <Link to="/products/import">
-            <Button variant="outline">
+          <Link className="w-full sm:w-auto" to="/products/import">
+            <Button className="w-full sm:w-auto" variant="outline">
               <Package className="w-4 h-4 mr-2" />
               Importar CSV
             </Button>
           </Link>
-          <Link to="/products/new">
-            <Button>
+          <Link className="w-full sm:w-auto" to="/products/new">
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Novo Produto
             </Button>
@@ -124,7 +124,7 @@ export default function ProdutosList() {
       <Card>
         <CardContent className="p-0">
           <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center gap-3">
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative min-w-0 flex-1 sm:min-w-[220px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -134,7 +134,7 @@ export default function ProdutosList() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
@@ -169,7 +169,7 @@ export default function ProdutosList() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs text-muted-foreground uppercase bg-slate-50 dark:bg-slate-900/50">
                 <tr>
                   <th className="px-4 py-3 font-medium">Produto</th>

@@ -18,12 +18,12 @@ export default function PrintingOperations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Impressão</h2>
           <p className="text-sm text-slate-500">Visão operacional dos agentes, impressoras e filas por loja.</p>
         </div>
-        <Button variant="outline" onClick={() => void refetch()}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={() => void refetch()}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Atualizar
         </Button>
@@ -41,7 +41,7 @@ export default function PrintingOperations() {
             <div className="py-10 text-center text-sm text-slate-500">Carregando...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[780px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase text-slate-500">
                     <th className="px-3 py-2">Loja</th>

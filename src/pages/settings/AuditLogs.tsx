@@ -159,7 +159,7 @@ export default function AuditLogs() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="min-w-[760px] divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ação / Data</th>
@@ -247,7 +247,7 @@ export default function AuditLogs() {
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div className="fixed inset-0 transition-opacity bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedLog(null)} />
 
-            <div className="relative inline-block w-full max-w-4xl p-6 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
+            <div className="relative inline-block w-full max-w-4xl overflow-hidden rounded-2xl bg-white p-4 text-left align-middle shadow-xl transition-all sm:p-6">
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">

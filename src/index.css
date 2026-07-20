@@ -72,5 +72,54 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-width: 320px;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  html,
+  #root {
+    min-height: 100%;
+  }
+
+  select,
+  textarea,
+  input,
+  button {
+    font: inherit;
+  }
+
+  @media (max-width: 639px) {
+    select,
+    textarea,
+    input {
+      font-size: 16px;
+    }
+
+    select,
+    textarea {
+      min-height: 2.5rem;
+    }
+
+    [class*="overflow-x-auto"] {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+    }
+
+    main h1,
+    main h2 {
+      overflow-wrap: anywhere;
+    }
+
+    main h2 {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    main p,
+    main td,
+    main th {
+      overflow-wrap: anywhere;
+    }
   }
 }

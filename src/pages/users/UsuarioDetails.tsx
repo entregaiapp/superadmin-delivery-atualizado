@@ -63,20 +63,20 @@ export default function UsuarioDetails() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link to="/users">
             <Button variant="outline" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold tracking-tight">Detalhes do Usuário</h2>
             <p className="text-muted-foreground text-sm">Informações completas do usuário do sistema.</p>
           </div>
         </div>
-        <Link to={`/users/${usuario.id}/edit`}>
-          <Button>
+        <Link className="sm:shrink-0" to={`/users/${usuario.id}/edit`}>
+          <Button className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" /> Editar Usuário
           </Button>
         </Link>
@@ -150,7 +150,7 @@ export default function UsuarioDetails() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Perfil</p>
                 <p className="mt-1 font-semibold">{perfilLabel}</p>
@@ -171,7 +171,7 @@ export default function UsuarioDetails() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t text-sm">
+            <div className="grid grid-cols-1 gap-4 border-t pt-2 text-sm min-[380px]:grid-cols-2">
               <div>
                 <p className="text-muted-foreground">Criado em</p>
                 <p>{formatDate(usuario.criado_em)}</p>

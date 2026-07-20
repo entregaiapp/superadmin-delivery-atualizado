@@ -448,14 +448,14 @@ export default function CategoriasList() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950 sm:px-6 sm:py-4">
               <h3 className="text-lg font-bold">{editingCategoria ? "Editar Categoria" : "Nova Categoria"}</h3>
               <Button type="button" variant="ghost" size="icon" onClick={handleCloseModal}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <CategoriaFormModal
                 categoria={editingCategoria}
                 categorias={modalCategorias}
@@ -530,8 +530,8 @@ function CategoriaFormModal({
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-4">
-        <div className="col-span-3 space-y-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className="space-y-2 sm:col-span-3">
           <Label htmlFor="nome">Nome</Label>
           <Input
             id="nome"
@@ -574,7 +574,7 @@ function CategoriaFormModal({
 
       <div className="space-y-2">
         <Label>Emoji rápido</Label>
-        <div className="grid grid-cols-8 gap-2">
+        <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
           {emojiOptions.map((option) => (
             <button
               type="button"
@@ -593,7 +593,7 @@ function CategoriaFormModal({
         <Input id="slug" value={slug} onChange={(event) => setSlug(buildSlug(event.target.value))} placeholder="ex: laticinios" required />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="ordem">Ordem</Label>
           <Input id="ordem" type="number" value={ordem} onChange={(event) => setOrdem(event.target.value)} />
@@ -606,7 +606,7 @@ function CategoriaFormModal({
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+      <div className="mt-6 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 dark:border-slate-800 sm:flex sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancelar
         </Button>

@@ -28,7 +28,7 @@ export default function RegrasSplitList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Regras de cobrança
@@ -37,7 +37,7 @@ export default function RegrasSplitList() {
             Gerencie as taxas e comissões da plataforma (Application Fee).
           </p>
         </div>
-        <Button onClick={() => navigate("/settings/split-rules/new")}>
+        <Button className="w-full sm:w-auto" onClick={() => navigate("/settings/split-rules/new")}>
           <Plus className="w-4 h-4 mr-2" />
           Nova Regra
         </Button>
@@ -45,14 +45,14 @@ export default function RegrasSplitList() {
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Nome da Regra</th>
-                <th className="px-6 py-4">Loja</th>
-                <th className="px-6 py-4">Gateway</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-3 py-4 sm:px-6">Nome da Regra</th>
+                <th className="px-3 py-4 sm:px-6">Loja</th>
+                <th className="px-3 py-4 sm:px-6">Gateway</th>
+                <th className="px-3 py-4 sm:px-6">Status</th>
+                <th className="px-3 py-4 text-right sm:px-6">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -65,7 +65,7 @@ export default function RegrasSplitList() {
               )}
               {regrasList.map((regra: any) => (
                 <tr key={regra.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4 sm:px-6">
                     <div className="font-medium text-slate-900 dark:text-white">
                       {regra.nome}
                     </div>
@@ -73,15 +73,15 @@ export default function RegrasSplitList() {
                       <div className="text-xs text-slate-500 mt-1">{regra.descricao}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                  <td className="px-3 py-4 text-slate-600 dark:text-slate-300 sm:px-6">
                     {regra.loja_nome}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4 sm:px-6">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
                       {regra.gateway}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4 sm:px-6">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         regra.ativo
@@ -92,7 +92,7 @@ export default function RegrasSplitList() {
                       {regra.ativo ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 py-4 text-right sm:px-6">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/split-rules/${regra.id}/edit`)}>
                         <Edit className="w-4 h-4 text-slate-500" />

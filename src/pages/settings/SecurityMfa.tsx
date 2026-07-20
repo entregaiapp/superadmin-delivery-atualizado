@@ -70,7 +70,7 @@ export default function SecurityMfa() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between gap-3">
+        <CardTitle className="flex flex-col items-stretch gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
           <span className="flex items-center gap-2"><KeyRound className="h-5 w-5" />Autenticação em dois fatores</span>
           <Button onClick={() => void enroll()} disabled={loading}><Plus className="mr-2 h-4 w-4" />Adicionar</Button>
         </CardTitle>

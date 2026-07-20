@@ -135,14 +135,14 @@ export default function ProdutoDetails() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold tracking-tight">{produto.nome}</h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               <Badge variant={produto.ativo ? "default" : "secondary"} className={produto.ativo ? "bg-green-100 text-green-700" : ""}>
                 {produto.ativo ? "Produto Ativo" : "Produto Inativo"}
               </Badge>
@@ -151,8 +151,8 @@ export default function ProdutoDetails() {
             </div>
           </div>
         </div>
-        <Link to={`/products/${produto.id}/edit`}>
-          <Button variant="outline">
+        <Link className="sm:shrink-0" to={`/products/${produto.id}/edit`}>
+          <Button className="w-full sm:w-auto" variant="outline">
             <Edit className="w-4 h-4 mr-2" />
             Editar Produto
           </Button>
@@ -231,7 +231,7 @@ export default function ProdutoDetails() {
               ) : (
                 <div className="space-y-3">
                   {variacoes.map(variacao => (
-                    <div key={variacao.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                    <div key={variacao.id} className="flex flex-col items-stretch gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900/50 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                       <div className="flex items-center gap-4">
                         <div className={`w-2 h-10 rounded-full ${variacao.ativa ? 'bg-green-500' : 'bg-slate-300'}`} />
                         <div>
@@ -300,7 +300,7 @@ export default function ProdutoDetails() {
                   {errors.nome && <p className="text-sm text-red-500">{errors.nome.message}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
                   <div className="space-y-2">
                     <Label>SKU</Label>
                     <Input {...register("sku")} placeholder="Opcional" />
@@ -311,7 +311,7 @@ export default function ProdutoDetails() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Peso (Kg)</Label>
                     <Input type="number" step="0.01" {...register("peso", { valueAsNumber: true })} />
@@ -333,7 +333,7 @@ export default function ProdutoDetails() {
                   <p className="text-sm text-red-500">Erro ao salvar variação. Tente novamente.</p>
                 )}
               </CardContent>
-              <div className="flex justify-end gap-2 p-6 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-100 p-4 dark:border-slate-800 sm:flex sm:justify-end sm:p-6">
                 <Button type="button" variant="outline" onClick={closeVariacaoModal}>Cancelar</Button>
                 <Button type="submit" disabled={saveVariacaoMutation.isPending}>
                   {saveVariacaoMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

@@ -92,14 +92,14 @@ export default function StoreDetails() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link to="/stores">
             <Button variant="outline" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold tracking-tight">
               Detalhes da Loja
             </h2>
@@ -108,14 +108,14 @@ export default function StoreDetails() {
             </p>
           </div>
         </div>
-        <Link to={`/stores/${store.id}/edit`}>
-          <Button>
+        <Link className="sm:shrink-0" to={`/stores/${store.id}/edit`}>
+          <Button className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" /> Editar Loja
           </Button>
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="-mx-3 flex gap-1 overflow-x-auto border-b border-slate-200 px-3 dark:border-slate-800 sm:mx-0 sm:flex-wrap sm:gap-2 sm:px-0">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -125,7 +125,7 @@ export default function StoreDetails() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+              className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -160,7 +160,7 @@ export default function StoreDetails() {
                 <p className="font-mono text-sm">{store.subdomain ? `${store.subdomain}.${TENANT_ROOT_DOMAIN}` : "Não informado"}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <Hash className="w-3 h-3" /> CNPJ
@@ -283,7 +283,7 @@ export default function StoreDetails() {
                     );
                   })}
                 </div>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:gap-6">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <DollarSign className="w-3 h-3" /> Pedido Mínimo
@@ -447,7 +447,7 @@ export default function StoreDetails() {
                 <p className="text-sm font-medium text-muted-foreground">Atualizado em</p>
                 <p>{formatDate(store.atualizado_em)}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+              <div className="grid grid-cols-1 gap-4 border-t pt-4 min-[380px]:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Latitude</p>
                   <p>{store.latitude ?? "Não informado"}</p>
