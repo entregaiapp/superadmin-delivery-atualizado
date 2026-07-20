@@ -79,7 +79,7 @@ export type FinancialDashboard = {
     referencia: FinancialReference;
     time_zone: string;
   };
-  filtros: Record<string, string | null>;
+  filtros: Record<string, string | string[] | null>;
   resumo: MoneyBucket & {
     fiado_recebido: number;
     total_efetivamente_recebido: number;

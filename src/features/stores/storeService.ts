@@ -87,10 +87,16 @@ export type StoreConfigurationUpdate = Partial<
 export interface DeliveryPaymentBillingReportFilters {
   dataInicio: string;
   dataFim: string;
+  dateType: "payment" | "order";
+  orderSources: Array<"CUSTOMER_APP" | "ADMIN" | "SALON" | "UNKNOWN">;
+  captureChannels: Array<"ONLINE_GATEWAY" | "EXTERNAL_OR_OFFLINE" | "CREDIT_TAB">;
+  paymentMethods: Array<"PIX" | "CARD" | "CASH" | "CREDIT_TAB">;
+  financialStatuses: Array<"RECEIVED" | "PENDING" | "REFUNDED" | "CANCELED" | "REJECTED" | "EXPIRED" | "UNDEFINED">;
 }
 
 export interface DeliveryPaymentBillingReport {
   id?: string;
+  versao_calculo?: number;
   loja: {
     id: string;
     nome: string;
@@ -100,6 +106,15 @@ export interface DeliveryPaymentBillingReport {
     data_inicio: string;
     data_fim: string;
     time_zone: string;
+    referencia?: "payment" | "order";
+  };
+  filtros?: {
+    loja_id?: string | null;
+    dateType?: "payment" | "order";
+    order_source?: string[] | null;
+    payment_capture_channel?: string[] | null;
+    payment_method?: string[] | null;
+    financial_status?: string[] | null;
   };
   regra_split: null | {
     id: string;
@@ -121,6 +136,23 @@ export interface DeliveryPaymentBillingReport {
     valor_bruto_total: number;
     total_taxas_reentrega?: number;
     valor_final_cobranca: number;
+    financeiro?: {
+      valor_registrado: number;
+      valor_recebido: number;
+      valor_pendente: number;
+      valor_estornado: number;
+      [key: string]: number;
+    };
+    taxa_plataforma?: {
+      base_elegivel: number;
+      taxa_calculada: number;
+      taxa_estornada: number;
+      taxa_liquida: number;
+      split_recebido: number;
+      split_pendente: number;
+      valor_a_cobrar: number;
+      diferenca_conciliacao: number;
+    };
     categorias?: Array<{
       categoria: string;
       label: string;
@@ -142,6 +174,12 @@ export interface DeliveryPaymentBillingReport {
     valor_bruto_total: number;
     total_taxas_reentrega?: number;
     valor_a_receber: number;
+    taxa_calculada?: number;
+    taxa_estornada?: number;
+    taxa_liquida?: number;
+    split_recebido?: number;
+    split_pendente?: number;
+    diferenca_conciliacao?: number;
     valor_a_receber_por_categoria?: Record<string, number>;
   }>;
   categorias?: Array<{
@@ -178,6 +216,22 @@ export interface DeliveryPaymentBillingReport {
     total: number;
     valor_cobranca: number;
     valor_taxa_calculada: number;
+    order_source?: string;
+    fulfillment_type?: string;
+    data_referencia?: string | null;
+    payment_methods?: string[];
+    payment_capture_channels?: string[];
+    financial_statuses?: string[];
+    quantidade_pagamentos?: number;
+    total_pedido?: number;
+    valor_pagamentos_selecionados?: number;
+    taxa_calculada?: number;
+    taxa_estornada?: number;
+    taxa_liquida?: number;
+    split_recebido?: number;
+    split_pendente?: number;
+    valor_a_cobrar?: number;
+    diferenca_conciliacao?: number;
   }>;
   gerado_em?: string;
   gerado_por?: {
@@ -371,7 +425,15 @@ export const storeService = {
     storeId: string,
     params: DeliveryPaymentBillingReportFilters,
   ): Promise<DeliveryPaymentBillingReport> => {
-    const response = await api.post(`/caixa-plataforma/lojas/${storeId}/relatorios-pagamentos-entrega`, params);
+    const response = await api.post(`/caixa-plataforma/lojas/${storeId}/relatorios-pagamentos-entrega`, {
+      dataInicio: params.dataInicio,
+      dataFim: params.dataFim,
+      dateType: params.dateType,
+      order_source: params.orderSources,
+      payment_capture_channel: params.captureChannels,
+      payment_method: params.paymentMethods,
+      financial_status: params.financialStatuses,
+    });
     return unwrapApiData(response.data);
   }
 };
