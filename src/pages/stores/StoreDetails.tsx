@@ -69,6 +69,7 @@ export default function StoreDetails() {
 
   const deliveryOrderCreationEnabled = storeConfig?.permitir_criacao_pedidos_delivery_admin === true;
   const adminOrderFeeEnabled = storeConfig?.aplicar_taxa_pedidos_admin === true;
+  const paymentOnlyOnDeliveryEnabled = storeConfig?.pagamento_somente_na_entrega === true;
   const adminPixEnabled = storeConfig?.pix_pedido_admin_habilitado === true;
   const adminPixExpiration = Number(storeConfig?.pix_pedido_admin_expiracao_minutos) || 30;
   const receiptPinRequired = storeConfig?.exigir_pin_confirmacao_entrega === true;
@@ -330,6 +331,16 @@ export default function StoreDetails() {
                       </span>
                     </span>
                     {preferenceBadge(adminOrderFeeEnabled, "Aplicada", "Desativada")}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                    <span>
+                      <span className="block text-sm font-medium">Pagamento somente na entrega/retirada</span>
+                      <span className="block text-xs text-muted-foreground">
+                        O checkout cria um recebível presencial pendente, sem acionar o gateway.
+                      </span>
+                    </span>
+                    {preferenceBadge(paymentOnlyOnDeliveryEnabled, "Habilitado", "Desabilitado")}
                   </div>
 
                   <div className="flex items-center justify-between gap-4 rounded-md border p-3">

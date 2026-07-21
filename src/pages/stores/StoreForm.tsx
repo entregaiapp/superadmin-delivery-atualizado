@@ -106,6 +106,7 @@ const storeSchema = z.object({
   preco_app_taxa_ativa: z.boolean(),
   permitir_criacao_pedidos_delivery_admin: z.boolean(),
   aplicar_taxa_pedidos_admin: z.boolean(),
+  pagamento_somente_na_entrega: z.boolean(),
   pix_pedido_admin_habilitado: z.boolean(),
   pix_pedido_admin_expiracao_minutos: z.number().int().min(30).max(1440),
   permitir_cpf_na_nota_cliente: z.boolean(),
@@ -171,6 +172,7 @@ export default function StoreForm() {
       preco_app_taxa_ativa: false,
       permitir_criacao_pedidos_delivery_admin: false,
       aplicar_taxa_pedidos_admin: false,
+      pagamento_somente_na_entrega: false,
       pix_pedido_admin_habilitado: false,
       pix_pedido_admin_expiracao_minutos: 30,
       permitir_cpf_na_nota_cliente: false,
@@ -188,6 +190,7 @@ export default function StoreForm() {
   const orderExperienceFeedbackEnabled = watch("exibir_avaliacao_experiencia_compra");
   const deliveryOrderCreationEnabled = watch("permitir_criacao_pedidos_delivery_admin");
   const adminOrderFeeEnabled = watch("aplicar_taxa_pedidos_admin");
+  const paymentOnlyOnDeliveryEnabled = watch("pagamento_somente_na_entrega");
   const adminPixEnabled = watch("pix_pedido_admin_habilitado");
   const receiptPinRequired = watch("exigir_pin_confirmacao_entrega");
   const cpfInvoiceEnabled = watch("permitir_cpf_na_nota_cliente");
@@ -258,6 +261,7 @@ export default function StoreForm() {
         preco_app_taxa_ativa: Boolean(store.preco_app_taxa_ativa),
         permitir_criacao_pedidos_delivery_admin: storeConfig?.permitir_criacao_pedidos_delivery_admin === true,
         aplicar_taxa_pedidos_admin: storeConfig?.aplicar_taxa_pedidos_admin === true,
+        pagamento_somente_na_entrega: storeConfig?.pagamento_somente_na_entrega === true,
         pix_pedido_admin_habilitado: storeConfig?.pix_pedido_admin_habilitado === true,
         pix_pedido_admin_expiracao_minutos: Number(storeConfig?.pix_pedido_admin_expiracao_minutos) || 30,
         permitir_cpf_na_nota_cliente: storeConfig?.permitir_cpf_na_nota_cliente === true,
@@ -270,6 +274,7 @@ export default function StoreForm() {
     if (storeConfig && isEditing) {
       setValue("permitir_criacao_pedidos_delivery_admin", storeConfig.permitir_criacao_pedidos_delivery_admin === true);
       setValue("aplicar_taxa_pedidos_admin", storeConfig.aplicar_taxa_pedidos_admin === true);
+      setValue("pagamento_somente_na_entrega", storeConfig.pagamento_somente_na_entrega === true);
       setValue("pix_pedido_admin_habilitado", storeConfig.pix_pedido_admin_habilitado === true);
       setValue("pix_pedido_admin_expiracao_minutos", Number(storeConfig.pix_pedido_admin_expiracao_minutos) || 30);
       setValue("permitir_cpf_na_nota_cliente", storeConfig.permitir_cpf_na_nota_cliente === true);
@@ -293,6 +298,7 @@ export default function StoreForm() {
       const {
         permitir_criacao_pedidos_delivery_admin,
         aplicar_taxa_pedidos_admin,
+        pagamento_somente_na_entrega,
         pix_pedido_admin_habilitado,
         pix_pedido_admin_expiracao_minutos,
         permitir_cpf_na_nota_cliente,
@@ -325,6 +331,7 @@ export default function StoreForm() {
           followUpUpdates.push(storeService.updateStoreConfiguration(id!, {
             permitir_criacao_pedidos_delivery_admin,
             aplicar_taxa_pedidos_admin,
+            pagamento_somente_na_entrega,
             pix_pedido_admin_habilitado,
             pix_pedido_admin_expiracao_minutos,
             permitir_cpf_na_nota_cliente,
@@ -722,6 +729,30 @@ export default function StoreForm() {
                   className="h-5 w-5 shrink-0 accent-slate-900"
                 />
               </label>
+
+              <label
+                htmlFor="pagamento_somente_na_entrega"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold">Pagamento somente na entrega/retirada</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    O cliente escolhe PIX, crédito, débito ou dinheiro e a loja confirma o recebimento no painel, sem gateway no checkout.
+                  </span>
+                </span>
+                <input
+                  id="pagamento_somente_na_entrega"
+                  type="checkbox"
+                  {...register("pagamento_somente_na_entrega")}
+                  className="h-5 w-5 shrink-0 accent-slate-900"
+                />
+              </label>
+
+              {paymentOnlyOnDeliveryEnabled && (
+                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  A loja deve manter ao menos uma forma compatível selecionada no painel do tenant.
+                </p>
+              )}
 
               <div className="rounded-lg border bg-muted/20 p-4">
                 <Label htmlFor="pix_pedido_admin_expiracao_minutos">Validade de cada QR Code Pix (minutos)</Label>

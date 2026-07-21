@@ -63,6 +63,10 @@ export interface StoreAdminOrderFeePreference {
   aplicar_taxa_pedidos_admin: boolean;
 }
 
+export interface StorePaymentOnlyOnDeliveryPreference {
+  pagamento_somente_na_entrega: boolean;
+}
+
 export interface StoreAdminPixPreference {
   pix_pedido_admin_habilitado: boolean;
   pix_pedido_admin_expiracao_minutos: number;
@@ -79,6 +83,7 @@ export interface StoreReceiptPinPreference {
 export type StoreConfigurationUpdate = Partial<
   StoreOrderCreationPreference &
   StoreAdminOrderFeePreference &
+  StorePaymentOnlyOnDeliveryPreference &
   StoreAdminPixPreference &
   StoreCpfInvoicePreference &
   StoreReceiptPinPreference
