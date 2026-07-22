@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Download, FileText, Loader2, Search } from "lucide-react";
-import { storeService, type DeliveryPaymentBillingReport } from "../../../features/stores/storeService";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Download, FileText, Loader2, Save, Search, Settings2 } from "lucide-react";
+import { storeService, type CashReportPrintSettings, type DeliveryPaymentBillingReport } from "../../../features/stores/storeService";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
@@ -19,6 +19,14 @@ type ReportFilters = {
   captureChannels: string[];
   paymentMethods: string[];
   financialStatuses: string[];
+};
+
+const defaultPrintSettings: CashReportPrintSettings = {
+  dateType: "payment",
+  order_source: ["CUSTOMER_APP", "ADMIN", "SALON", "UNKNOWN"],
+  payment_capture_channel: ["EXTERNAL_OR_OFFLINE"],
+  payment_method: ["PIX", "CARD", "CASH"],
+  financial_status: ["RECEIVED", "PENDING", "REFUNDED", "UNDEFINED"],
 };
 
 const sourceOptions: Option[] = [
@@ -178,6 +186,33 @@ export default function RelatorioPagamentosEntrega({ lojaId }: { lojaId: string 
     paymentMethods: ["PIX", "CARD", "CASH"],
     financialStatuses: ["RECEIVED", "PENDING", "REFUNDED", "UNDEFINED"],
   });
+  const [printSettingsDraft, setPrintSettingsDraft] = useState<{
+    lojaId: string;
+    settings: CashReportPrintSettings;
+  } | null>(null);
+  const printSettingsQuery = useQuery({
+    queryKey: ["cash-report-print-settings", lojaId],
+    queryFn: () => storeService.getCashReportPrintSettings(lojaId),
+  });
+  const printSettings = printSettingsDraft?.lojaId === lojaId
+    ? printSettingsDraft.settings
+    : printSettingsQuery.data || defaultPrintSettings;
+  const setPrintSettings = (
+    value: CashReportPrintSettings | ((current: CashReportPrintSettings) => CashReportPrintSettings),
+  ) => {
+    const settings = typeof value === "function" ? value(printSettings) : value;
+    setPrintSettingsDraft({ lojaId, settings });
+  };
+  const savePrintSettingsMutation = useMutation({
+    mutationFn: () => storeService.updateCashReportPrintSettings(lojaId, printSettings),
+    onSuccess: (saved) => setPrintSettings(saved),
+  });
+  const printSettingsEmptyGroup = [
+    printSettings.order_source,
+    printSettings.payment_capture_channel,
+    printSettings.payment_method,
+    printSettings.financial_status,
+  ].some((values) => values.length === 0);
   const invalidRange = filters.dataFim < filters.dataInicio;
   const emptyGroup = [filters.orderSources, filters.captureChannels, filters.paymentMethods, filters.financialStatuses].some((values) => values.length === 0);
   const reportMutation = useMutation({
@@ -197,6 +232,52 @@ export default function RelatorioPagamentosEntrega({ lojaId }: { lojaId: string 
         <CardDescription>Usa a mesma conciliação do dashboard financeiro e salva um snapshot auditável para a loja.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <section className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Settings2 className="h-4 w-4" />Informações para impressão de relatório</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Define quais cobranças entram no valor mostrado no fechamento de caixa da loja. O período usado será sempre da abertura até o fechamento do caixa.</p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => savePrintSettingsMutation.mutate()}
+              disabled={printSettingsQuery.isLoading || savePrintSettingsMutation.isPending || printSettingsEmptyGroup}
+            >
+              {savePrintSettingsMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Salvar para impressão
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Referência das datas</Label>
+            <select
+              className="flex h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={printSettings.dateType}
+              onChange={(event) => setPrintSettings((current) => ({ ...current, dateType: event.target.value as "payment" | "order" }))}
+              disabled={printSettingsQuery.isLoading}
+            >
+              <option value="payment">Data do pagamento</option>
+              <option value="order">Data do pedido</option>
+            </select>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-2">
+            <CheckboxGroup title="Origens" options={sourceOptions} selected={printSettings.order_source} onChange={(values) => setPrintSettings((current) => ({ ...current, order_source: values as CashReportPrintSettings["order_source"] }))} />
+            <CheckboxGroup title="Canais de captura" options={channelOptions} selected={printSettings.payment_capture_channel} onChange={(values) => setPrintSettings((current) => ({ ...current, payment_capture_channel: values as CashReportPrintSettings["payment_capture_channel"] }))} />
+            <CheckboxGroup title="Formas de pagamento" options={methodOptions} selected={printSettings.payment_method} onChange={(values) => setPrintSettings((current) => ({ ...current, payment_method: values as CashReportPrintSettings["payment_method"] }))} />
+            <CheckboxGroup title="Situações financeiras" options={statusOptions} selected={printSettings.financial_status} onChange={(values) => setPrintSettings((current) => ({ ...current, financial_status: values as CashReportPrintSettings["financial_status"] }))} />
+          </div>
+
+          {printSettingsQuery.isLoading && <p className="text-sm text-muted-foreground">Carregando configuração de impressão...</p>}
+          {printSettingsEmptyGroup && <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-700">Selecione ao menos uma opção em cada grupo.</div>}
+          {(printSettingsQuery.error || savePrintSettingsMutation.error) && <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">Não foi possível carregar ou salvar a configuração de impressão.</div>}
+          {savePrintSettingsMutation.isSuccess && !savePrintSettingsMutation.isPending && <div className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">Configuração usada nas impressões do caixa salva com sucesso.</div>}
+        </section>
+
+        <div className="border-t pt-4">
+          <p className="text-sm font-semibold">Gerar relatório avulso</p>
+          <p className="text-xs text-muted-foreground">Os filtros abaixo servem apenas para gerar e salvar esta consulta.</p>
+        </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1"><Label>Data inicial</Label><Input type="date" value={filters.dataInicio} onChange={(event) => setFilters((current) => ({ ...current, dataInicio: event.target.value }))} /></div>
           <div className="space-y-1"><Label>Data final</Label><Input type="date" value={filters.dataFim} onChange={(event) => setFilters((current) => ({ ...current, dataFim: event.target.value }))} /></div>

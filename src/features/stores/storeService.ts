@@ -99,6 +99,14 @@ export interface DeliveryPaymentBillingReportFilters {
   financialStatuses: Array<"RECEIVED" | "PENDING" | "REFUNDED" | "CANCELED" | "REJECTED" | "EXPIRED" | "UNDEFINED">;
 }
 
+export interface CashReportPrintSettings {
+  dateType: "payment" | "order";
+  order_source: Array<"CUSTOMER_APP" | "ADMIN" | "SALON" | "UNKNOWN">;
+  payment_capture_channel: Array<"ONLINE_GATEWAY" | "EXTERNAL_OR_OFFLINE" | "CREDIT_TAB">;
+  payment_method: Array<"PIX" | "CARD" | "CASH" | "CREDIT_TAB">;
+  financial_status: Array<"RECEIVED" | "PENDING" | "REFUNDED" | "CANCELED" | "REJECTED" | "EXPIRED" | "UNDEFINED">;
+}
+
 export interface DeliveryPaymentBillingReport {
   id?: string;
   versao_calculo?: number;
@@ -439,6 +447,22 @@ export const storeService = {
       payment_method: params.paymentMethods,
       financial_status: params.financialStatuses,
     });
+    return unwrapApiData(response.data);
+  },
+
+  getCashReportPrintSettings: async (storeId: string): Promise<CashReportPrintSettings> => {
+    const response = await api.get(`/caixa-plataforma/lojas/${storeId}/informacoes-impressao-relatorio`);
+    return unwrapApiData(response.data);
+  },
+
+  updateCashReportPrintSettings: async (
+    storeId: string,
+    settings: CashReportPrintSettings,
+  ): Promise<CashReportPrintSettings> => {
+    const response = await api.put(
+      `/caixa-plataforma/lojas/${storeId}/informacoes-impressao-relatorio`,
+      settings,
+    );
     return unwrapApiData(response.data);
   }
 };
