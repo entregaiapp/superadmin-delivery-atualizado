@@ -16,11 +16,18 @@ export interface PagarmeRecipient {
   recipient_code?: string | null;
   status?: string | null;
   kyc_status?: string | null;
+  kyc_status_reason?: string | null;
   document_last4?: string | null;
   bank_account_last4?: string | null;
   transfer_enabled?: boolean | null;
   transfer_interval?: string | null;
   transfer_day?: number | null;
+}
+
+export interface PagarmeKycLink {
+  recipient_id: string;
+  url: string;
+  expiration_date: string | null;
 }
 
 function unwrap<T>(responseData: any): T {
@@ -51,5 +58,10 @@ export const pagarmeService = {
   syncRecipient: async (lojaId: string) => {
     const response = await api.post(`/payment-gateways/admin/lojas/${lojaId}/pagarme/recipient/sync`);
     return unwrap<PagarmeRecipient>(response.data);
+  },
+
+  createKycLink: async (lojaId: string) => {
+    const response = await api.post(`/payment-gateways/admin/lojas/${lojaId}/pagarme/recipient/kyc-link`);
+    return unwrap<PagarmeKycLink>(response.data);
   },
 };

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, RefreshCw, Save, ShieldCheck, Store, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, Link2, RefreshCw, Save, ShieldCheck, Store, XCircle } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -60,6 +60,8 @@ export default function PagarmeMarketplace() {
   const queryClient = useQueryClient();
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [form, setForm] = useState<any>(emptyForm);
+  const [kycLink, setKycLink] = useState<{ url: string; expiration_date: string | null } | null>(null);
+  const [operationError, setOperationError] = useState("");
 
   const storesQuery = useQuery({
     queryKey: ["stores", "pagarme-select"],
@@ -174,8 +176,37 @@ export default function PagarmeMarketplace() {
 
   const syncMutation = useMutation({
     mutationFn: () => pagarmeService.syncRecipient(selectedStoreId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pagarme-recipient", selectedStoreId] }),
+    onSuccess: () => {
+      setOperationError("");
+      setKycLink(null);
+      queryClient.invalidateQueries({ queryKey: ["pagarme-recipient", selectedStoreId] });
+    },
+    onError: (error: any) => setOperationError(error?.response?.data?.error?.message || "Não foi possível sincronizar o recebedor."),
   });
+
+  const kycMutation = useMutation({
+    mutationFn: () => pagarmeService.createKycLink(selectedStoreId),
+    onSuccess: (data) => {
+      setOperationError("");
+      setKycLink(data);
+      queryClient.invalidateQueries({ queryKey: ["pagarme-recipient", selectedStoreId] });
+    },
+    onError: (error: any) => setOperationError(error?.response?.data?.error?.message || "Não foi possível gerar o link de validação."),
+  });
+
+  const kycReady = selectedRecipient?.status === "affiliation"
+    && selectedRecipient?.kyc_status === "partially_denied"
+    && selectedRecipient?.kyc_status_reason === "additional_documents_required";
+
+  const copyKycLink = async () => {
+    if (!kycLink?.url) return;
+    try {
+      await navigator.clipboard.writeText(kycLink.url);
+      setOperationError("");
+    } catch {
+      setOperationError("Não foi possível copiar o link. Selecione-o manualmente.");
+    }
+  };
 
   const config = configQuery.data;
   const configItems = [
@@ -220,15 +251,24 @@ export default function PagarmeMarketplace() {
           <CardDescription>Crie, atualize ou sincronize o recebedor Pagar.me da loja selecionada.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <select value={selectedStoreId} onChange={(event) => setSelectedStoreId(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+            <select value={selectedStoreId} onChange={(event) => {
+              setSelectedStoreId(event.target.value);
+              setKycLink(null);
+              setOperationError("");
+            }} className="h-10 rounded-md border bg-background px-3 text-sm">
               <option value="">Selecione uma loja</option>
               {stores.map((store: any) => <option key={store.id} value={store.id}>{store.nome}</option>)}
             </select>
             <Button variant="outline" disabled={!selectedStoreId || !selectedRecipient?.recipient_id || syncMutation.isPending} onClick={() => syncMutation.mutate()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
             </Button>
+            <Button disabled={!kycReady || kycMutation.isPending} onClick={() => kycMutation.mutate()}>
+              <Link2 className="mr-2 h-4 w-4" /> Gerar link KYC
+            </Button>
           </div>
+
+          {operationError && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{operationError}</p>}
 
           {selectedStoreId && (
             <div className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-4">
@@ -236,6 +276,35 @@ export default function PagarmeMarketplace() {
               <div><p className="text-xs text-muted-foreground">Recipient</p><p className="font-mono text-xs">{selectedRecipient?.recipient_id || "não cadastrado"}</p></div>
               <div><p className="text-xs text-muted-foreground">Status</p><Badge variant={selectedRecipient?.status === "active" ? "success" : "secondary"}>{selectedRecipient?.status || "pendente"}</Badge></div>
               <div><p className="text-xs text-muted-foreground">Dados mascarados</p><p className="text-sm">Doc {selectedRecipient?.document_last4 || "-"} · Conta {selectedRecipient?.bank_account_last4 || "-"}</p></div>
+            </div>
+          )}
+
+          {selectedRecipient?.recipient_id && (
+            <div className="rounded-lg border p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Validação de identidade (KYC)</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRecipient.status === "active"
+                      ? "Validação concluída; o recebedor está ativo."
+                      : kycReady
+                        ? "O Pagar.me solicitou documentos adicionais. Gere o link e envie ao titular do recebedor."
+                        : "Aguardando o Pagar.me liberar a validação. Use Sincronizar para consultar novamente."}
+                  </p>
+                </div>
+                {selectedRecipient.kyc_status && <Badge variant="secondary">{selectedRecipient.kyc_status}</Badge>}
+              </div>
+              {kycLink && (
+                <div className="mt-4 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs font-medium text-amber-900">Link temporário — envie somente ao titular. Ele expira em aproximadamente 20 minutos.</p>
+                  <div className="flex flex-col gap-2 md:flex-row">
+                    <Input value={kycLink.url} readOnly aria-label="Link de validação KYC" />
+                    <Button type="button" variant="outline" onClick={() => void copyKycLink()}><Copy className="mr-2 h-4 w-4" /> Copiar</Button>
+                    <a href={kycLink.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"><ExternalLink className="mr-2 h-4 w-4" /> Abrir</a>
+                  </div>
+                  {kycLink.expiration_date && <p className="text-xs text-amber-800">Expira em: {new Date(kycLink.expiration_date).toLocaleString("pt-BR")}</p>}
+                </div>
+              )}
             </div>
           )}
 
