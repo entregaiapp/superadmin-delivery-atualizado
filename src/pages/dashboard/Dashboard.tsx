@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Store,
+  TrendingUp,
   Utensils,
   WalletCards,
 } from "lucide-react";
@@ -24,6 +25,8 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -41,6 +44,7 @@ import {
   type DashboardFilters,
   type FinancialStatus,
   type LabeledMoneyBucket,
+  type OrderOriginPercentagePoint,
   type OrderSource,
   type PaymentMethod,
 } from "../../features/financial/superadminDashboardService";
@@ -85,6 +89,10 @@ function money(value: number | string | null | undefined) {
 function dateLabel(value: string) {
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function percentage(value: number | string | null | undefined) {
+  return `${Number(value || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
 function MetricCard({ title, value, description, icon: Icon, color = "text-slate-700" }: {
@@ -268,6 +276,7 @@ export default function Dashboard() {
   }
 
   const data = dashboardQuery.data;
+  const orderOriginEvolution = data.evolucao_percentual_pedidos || [];
   const summary = data.resumo;
   const platform = data.taxa_plataforma.resumo;
   const originMap = new Map(data.por_origem.map((item) => [item.key, item]));
@@ -437,6 +446,57 @@ export default function Dashboard() {
                 <Bar dataKey="desconhecido" name="Desconhecido" stackId="recebimentos" fill="#dc2626" />
                 <Bar dataKey="fiado" name="Baixas de fiado" stackId="recebimentos" fill="#059669" />
               </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <SectionTitle
+        title="Participação dos pedidos por origem"
+        description="Percentual diário de pedidos criados no app do cliente e no painel administrativo, considerando o período e a loja selecionados."
+        icon={TrendingUp}
+      />
+      <Card className="border-slate-200 shadow-sm dark:border-slate-800">
+        <CardContent className="pt-6">
+          {orderOriginEvolution.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+              Nenhum pedido do app ou do painel administrativo no período.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={orderOriginEvolution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="data" tickFormatter={dateLabel} tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={percentage} tick={{ fontSize: 11 }} />
+                <Tooltip
+                  labelFormatter={(label) => dateLabel(String(label))}
+                  formatter={(value, name, item) => {
+                    const point = item.payload as OrderOriginPercentagePoint;
+                    const count = item.dataKey === "percentual_app" ? point.quantidade_app : point.quantidade_admin;
+                    const orderLabel = count === 1 ? "pedido" : "pedidos";
+                    return [`${percentage(Number(value))} (${count.toLocaleString("pt-BR")} ${orderLabel})`, String(name)];
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="percentual_app"
+                  name="App do cliente"
+                  stroke="#7c3aed"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="percentual_admin"
+                  name="Painel administrativo"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           )}
         </CardContent>

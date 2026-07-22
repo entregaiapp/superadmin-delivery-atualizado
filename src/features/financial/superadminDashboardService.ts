@@ -72,6 +72,15 @@ export type StoreFinancialRow = MoneyBucket & PlatformMoney & {
   offline_recebido: number;
 };
 
+export type OrderOriginPercentagePoint = {
+  data: string;
+  quantidade_app: number;
+  quantidade_admin: number;
+  total_pedidos: number;
+  percentual_app: number;
+  percentual_admin: number;
+};
+
 export type FinancialDashboard = {
   periodo: {
     data_inicio: string | null;
@@ -98,6 +107,7 @@ export type FinancialDashboard = {
     offline: number;
     fiado: number;
   }>;
+  evolucao_percentual_pedidos: OrderOriginPercentagePoint[];
   taxa_plataforma: {
     resumo: PlatformMoney;
     por_loja: StoreFinancialRow[];
