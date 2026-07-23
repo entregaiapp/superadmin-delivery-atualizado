@@ -7,7 +7,11 @@ export type PrintingOperationalRow = {
   agent_name?: string | null;
   app_version?: string | null;
   last_seen_at?: string | null;
+  active?: boolean | null;
+  paused_at?: string | null;
   revoked_at?: string | null;
+  operational_status?: "online" | "offline" | "inactive" | "suspended_schedule" | "revoked" | string | null;
+  next_open_at?: string | null;
   printers: number;
   pending_jobs: number;
   failed_jobs: number;

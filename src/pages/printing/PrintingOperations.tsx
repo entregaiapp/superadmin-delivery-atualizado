@@ -10,6 +10,18 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
+function statusLabel(row: { revoked_at?: string | null; active?: boolean | null; online?: boolean; operational_status?: string | null }) {
+  if (row.revoked_at || row.operational_status === "revoked") return "Revogado";
+  if (row.active === false || row.operational_status === "inactive") return "Inativo";
+  if (row.operational_status === "suspended_schedule") return "Fora do horário";
+  return row.online ? "Online" : "Offline";
+}
+
+function statusVariant(row: { revoked_at?: string | null; active?: boolean | null; online?: boolean; operational_status?: string | null }): "default" | "secondary" {
+  if (row.online && row.active !== false && !row.revoked_at) return "default";
+  return "secondary";
+}
+
 export default function PrintingOperations() {
   const { data = [], isLoading, refetch } = useQuery({
     queryKey: ["printing-operational-summary"],
@@ -41,7 +53,7 @@ export default function PrintingOperations() {
             <div className="py-10 text-center text-sm text-slate-500">Carregando...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[780px] text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase text-slate-500">
                     <th className="px-3 py-2">Loja</th>
@@ -49,6 +61,7 @@ export default function PrintingOperations() {
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Versão</th>
                     <th className="px-3 py-2">Última conexão</th>
+                    <th className="px-3 py-2">Próxima abertura</th>
                     <th className="px-3 py-2 text-right">Impressoras</th>
                     <th className="px-3 py-2 text-right">Pendentes</th>
                     <th className="px-3 py-2 text-right">Falhas</th>
@@ -60,12 +73,13 @@ export default function PrintingOperations() {
                       <td className="px-3 py-3 font-medium">{row.loja_nome}</td>
                       <td className="px-3 py-3">{row.agent_name || "Sem agente"}</td>
                       <td className="px-3 py-3">
-                        <Badge variant={row.online ? "default" : "secondary"}>
-                          {row.revoked_at ? "Revogado" : row.online ? "Online" : "Offline"}
+                        <Badge variant={statusVariant(row)}>
+                          {statusLabel(row)}
                         </Badge>
                       </td>
                       <td className="px-3 py-3">{row.app_version || "-"}</td>
                       <td className="px-3 py-3">{formatDate(row.last_seen_at)}</td>
+                      <td className="px-3 py-3">{formatDate(row.next_open_at)}</td>
                       <td className="px-3 py-3 text-right">{row.printers}</td>
                       <td className="px-3 py-3 text-right">{row.pending_jobs}</td>
                       <td className="px-3 py-3 text-right font-semibold text-red-600">{row.failed_jobs}</td>
